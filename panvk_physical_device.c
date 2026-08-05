@@ -311,7 +311,6 @@ get_device_heaps(struct panvk_physical_device *device,
 
    return VK_SUCCESS;
 }
-
 static VkResult
 get_device_sync_types(struct panvk_physical_device *device,
                       const struct panvk_instance *instance)
@@ -319,14 +318,16 @@ get_device_sync_types(struct panvk_physical_device *device,
    const unsigned arch = pan_arch(device->kmod.dev->props.gpu_id);
    uint32_t sync_type_count = 0;
 
-   device->drm_syncobj_type = vk_drm_syncobj_get_type(device->kmod.dev->fd);
-   if (!device->drm_syncobj_type.features) {
-      return vk_errorf(instance, VK_ERROR_INITIALIZATION_FAILED,
-                       "failed to query syncobj features");
+   if (fcntl(device->kmod.dev->fd, F_GETFL) != -1) {
+      device->drm_syncobj_type = vk_drm_syncobj_get_type(device->kmod.dev->fd);
+      if (!device->drm_syncobj_type.features) {
+         return vk_errorf(instance, VK_ERROR_INITIALIZATION_FAILED, "failed to query syncobj features");
+      }
+   } else {
+      device->drm_syncobj_type.features = VK_SYNC_FEATURE_BINARY | VK_SYNC_FEATURE_TIMELINE;
    }
 
    device->sync_types[sync_type_count++] = &device->drm_syncobj_type;
-
    if (arch >= 10) {
       assert(device->drm_syncobj_type.features & VK_SYNC_FEATURE_TIMELINE);
    } else {
@@ -428,32 +429,21 @@ panvk_physical_device_init(struct panvk_physical_device *device,
 
    unsigned core_count =
       pan_query_core_count(&device->kmod.dev->props);
+	result = get_core_masks(device, instance);
 
    memset(device->name, 0, sizeof(device->name));
    sprintf(device->name, "%s MC%u", device->model->name, core_count);
 
-   result = get_core_masks(device, instance);
    if (result != VK_SUCCESS)
       goto fail;
-	fprintf(stderr, "[kbase] get_core_masks returned %d\n", result);
-
    result = get_device_heaps(device, instance);
    if (result != VK_SUCCESS)
-	fprintf(stderr, "[kbase] get_device_heaps returned %d\n", result);
       goto fail;
 
    result = get_device_sync_types(device, instance);
-	fprintf(stderr, "[kbase] get_device_sync_types returned %d\n", result);
    if (result != VK_SUCCESS)
       goto fail;
-
-   if (arch >= 10) {
-      /* XXX: Make dri options for thoses */
-      device->csf.tiler.chunk_size = 2 * 1024 * 1024;
-      device->csf.tiler.initial_chunks = 5;
-      device->csf.tiler.max_chunks = 64;
-   }
-
+	fprintf(stderr, "[kbase] passed heaps & sync_types checks\n");
    if (arch != 10)
       vk_warn_non_conformant_implementation("panvk");
 

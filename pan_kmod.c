@@ -43,6 +43,22 @@ union kbase_cqgc_16 {
 /* ── kbase device ── */
 struct kbase_dev { struct pan_kmod_dev base; uint8_t group; uint32_t ctx; };
 
+struct kbase_gpu_info { uint64_t gpu_id; uint64_t shader_present; };
+static struct kbase_gpu_info kbase_query_gpu_info(int fd) {
+    struct kbase_gpu_info info = { 0xA8070000, 0x3F };
+    struct { __u64 buffer; __u32 size; __u32 flags; } props = { .size = 65536, .flags = 0 };
+    void *buf = calloc(1, props.size);
+    if (!buf) return info;
+    props.buffer = (__u64)(uintptr_t)buf;
+    if (ioctl(fd, _IOW(0x80, 3, struct { __u64 b; __u32 s; __u32 f; }), &props) == 0) {
+        __u32 *raw = (__u32 *)buf;
+        info.gpu_id = ((uint64_t)raw[12]) << 32;
+        info.shader_present = raw[20]; /* approximate offset */
+    }
+    free(buf);
+    return info;
+}
+
 static struct pan_kmod_dev *
 kbase_dev_create(int fd, uint32_t flags, const struct pan_kmod_driver *drv, const struct pan_kmod_allocator *alloc)
 {
@@ -60,14 +76,13 @@ kbase_dev_create(int fd, uint32_t flags, const struct pan_kmod_driver *drv, cons
     if (ioctl(fd, KBASE_IOCTL_CS_QUEUE_GROUP_CREATE_1_6, &grp) < 0) { pan_kmod_free(alloc, kd); return NULL; }
     kd->group = grp.out.handle;
     pan_kmod_dev_init(&kd->base, fd, flags, drv, &panfrost_kmod_ops, alloc);
-    kd->base.props.gpu_id = 0xA8070000;
-	fprintf(stderr, "[kbase] kbase_dev_create: setting gpu_id=0x%llx\n", (unsigned long long)kd->base.props.gpu_id);
-    kd->base.props.shader_present = 0x3;
+    struct kbase_gpu_info info = kbase_query_gpu_info(fd);
+    kd->base.props.gpu_id = info.gpu_id ? info.gpu_id : 0xA8070000;
+    kd->base.props.shader_present = info.shader_present ? info.shader_present : 0x3F;
     kd->base.props.pgsize_bitmap = 0x1;
-    fprintf(stderr, "[kbase] device ready, fd=%d group=%u ctx=%u\n", fd, kd->group, kd->ctx);
+    fprintf(stderr, "[kbase] device ready, fd=%d group=%u ctx=%u gpu_id=0x%llx shader=0x%llx\n", fd, kd->group, kd->ctx, (unsigned long long)kd->base.props.gpu_id, (unsigned long long)kd->base.props.shader_present);
     return &kd->base;
 }
-
 static void kbase_dev_destroy(struct pan_kmod_dev *dev) { close(dev->fd); pan_kmod_dev_cleanup(dev); pan_kmod_free(dev->allocator, dev); }
 static struct pan_kmod_bo *kbase_bo_alloc(struct pan_kmod_dev *dev, struct pan_kmod_vm *vm, uint64_t size, uint32_t flags) {
     union kbase_ma mem = {0};
