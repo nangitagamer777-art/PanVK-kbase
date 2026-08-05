@@ -49,3 +49,16 @@ open-source Panthor DRM driver.
 
 ## License
 MIT
+
+## Phase 11 — vk_info working (August 5, 2026)
+
+PanVK now fully enumerates the Mali-G615 MC6:
+- **GPU Name:** Mali-G615 MC6
+- **API:** Vulkan 1.4.354
+- **Driver:** Mesa 26.2.0-rc2
+- **Extensions:** 154
+- **Compute Shader:** Supported
+- **Device ID:** 0xA8070000
+
+`libkbase_drm.so` provides DRM stubs (syncobj, prime, etc.) for compatibility.
+
