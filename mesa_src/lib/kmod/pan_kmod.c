@@ -1,4 +1,5 @@
 #include <errno.h>
+extern const struct pan_kmod_ops kbase_kmod_ops;
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +7,8 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/eventfd.h>
+#include "util/vma.h"
 #include <xf86drm.h>
 #include "util/macros.h"
 #include "util/u_memory.h"
@@ -41,6 +44,7 @@ union kbase_cqgc_16 {
 #define KBASE_IOCTL_CS_QUEUE_GROUP_CREATE_1_6 _IOWR(0x80, 42, union kbase_cqgc_16)
 
 /* ── kbase device ── */
+struct kbase_kmod_vm { struct pan_kmod_vm base; struct util_vma_heap heap; };
 struct kbase_dev { struct pan_kmod_dev base; uint8_t group; uint32_t ctx; };
 
 struct kbase_gpu_info { uint64_t gpu_id; uint64_t shader_present; };
@@ -59,6 +63,26 @@ static struct kbase_gpu_info kbase_query_gpu_info(int fd) {
     return info;
 }
 
+/* Query hardware properties - return real kbase values */
+static int kbase_query_props(struct pan_kmod_dev *dev, void *props) {
+    /* Fill with values that PanVK expects for Valhall v10 */
+    struct { uint32_t gpu_id; uint32_t csg_slots; uint32_t max_vregs; uint32_t coherency_features; } *p = props;
+    p->gpu_id = dev->props.gpu_id;
+    p->csg_slots = 4;
+    p->max_vregs = 64;
+    p->coherency_features = 1;
+    fprintf(stderr, "[kbase] query_props: gpu_id=0x%x csg=%u\n", p->gpu_id, p->csg_slots);
+    return 0;
+}
+
+/* Create a real sync object using eventfd */
+static int kbase_sync_create(struct pan_kmod_dev *dev, uint32_t flags, uint32_t *handle) {
+    int fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (fd < 0) return -1;
+    *handle = (uint32_t)fd;
+    fprintf(stderr, "[kbase] sync_create: fd=%d handle=%u\n", fd, *handle);
+    return 0;
+}
 static struct pan_kmod_dev *
 kbase_dev_create(int fd, uint32_t flags, const struct pan_kmod_driver *drv, const struct pan_kmod_allocator *alloc)
 {
@@ -81,6 +105,8 @@ kbase_dev_create(int fd, uint32_t flags, const struct pan_kmod_driver *drv, cons
     kd->base.props.shader_present = info.shader_present ? info.shader_present : 0x3F;
     kd->base.props.pgsize_bitmap = 0x1;
     fprintf(stderr, "[kbase] device ready, fd=%d group=%u ctx=%u gpu_id=0x%llx shader=0x%llx\n", fd, kd->group, kd->ctx, (unsigned long long)kd->base.props.gpu_id, (unsigned long long)kd->base.props.shader_present);
+    /* Force kbase ops - Mesa may overwrite them */
+    kd->base.ops = &kbase_kmod_ops;
     return &kd->base;
 }
 static void kbase_dev_destroy(struct pan_kmod_dev *dev) { close(dev->fd); pan_kmod_dev_cleanup(dev); pan_kmod_free(dev->allocator, dev); }
@@ -103,14 +129,34 @@ static struct pan_kmod_bo *kbase_bo_import(struct pan_kmod_dev *d, uint32_t h, u
 static int kbase_flush(struct pan_kmod_dev *d) { return 0; }
 static uint64_t kbase_timestamp(const struct pan_kmod_dev *d) { return 0; }
 static struct pan_kmod_vm *kbase_vm_create(struct pan_kmod_dev *dev, uint32_t flags, uint64_t start, uint64_t range) {
-    struct pan_kmod_vm *vm = pan_kmod_dev_alloc(dev, sizeof(*vm));
-    if (vm) pan_kmod_vm_init(vm, dev, 0, flags);
-    return vm;
+    struct kbase_kmod_vm *kvm = calloc(1, sizeof(*kvm));
+    if (!kvm) return NULL;
+    pan_kmod_vm_init(&kvm->base, dev, 0, flags | PAN_KMOD_VM_FLAG_AUTO_VA);
+    util_vma_heap_init(&kvm->heap, 0x100000000ULL, 0x100000000ULL);
+    fprintf(stderr, "[kbase] kbase_vm_create: heap init ok\n");
+    return &kvm->base;
 }
-static void kbase_vm_destroy(struct pan_kmod_vm *vm) { pan_kmod_vm_cleanup(vm); pan_kmod_dev_free(vm->dev, vm); }
-static int kbase_vm_bind(struct pan_kmod_vm *vm, enum pan_kmod_vm_op_mode mode, struct pan_kmod_vm_op *ops, uint32_t n) { return 0; }
 
-static const struct pan_kmod_ops kbase_kmod_ops = {
+static void kbase_vm_destroy(struct pan_kmod_vm *vm) {
+    struct kbase_kmod_vm *kvm = (struct kbase_kmod_vm *)vm;
+    util_vma_heap_finish(&kvm->heap);
+    pan_kmod_vm_cleanup(vm);
+    free(kvm);
+}
+
+static int kbase_vm_bind(struct pan_kmod_vm *vm, enum pan_kmod_vm_op_mode mode, struct pan_kmod_vm_op *ops, uint32_t n) {
+    struct kbase_kmod_vm *kvm = (struct kbase_kmod_vm *)vm;
+    for (uint32_t i = 0; i < n; i++) {
+        if (ops[i].type == PAN_KMOD_VM_OP_TYPE_MAP) {
+            if (ops[i].va.start == PAN_KMOD_VM_MAP_AUTO_VA) {
+                ops[i].va.start = util_vma_heap_alloc(&kvm->heap, ops[i].va.size, 4096);
+                fprintf(stderr, "[kbase] vm_bind: AUTO_VA -> 0x%llx\n", (unsigned long long)ops[i].va.start);
+            }
+        }
+    }
+    return 0;
+}
+const struct pan_kmod_ops kbase_kmod_ops = {
     .dev_create = kbase_dev_create, .dev_destroy = kbase_dev_destroy,
     .bo_alloc = kbase_bo_alloc, .bo_free = kbase_bo_free, .bo_import = kbase_bo_import,
     .bo_get_mmap_offset = kbase_bo_get_mmap_offset, .bo_wait = kbase_bo_wait,
