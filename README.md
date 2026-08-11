@@ -178,6 +178,13 @@ of the required runtime path at the current stage.
 
 [@nangitagamer777-art](https://github.com/nangitagamer777-art)
 
+## Reference
+
+* 0x36/Pixel_GPU_Exploit — ioctl command numbers
+ * Google Project Zero, CVE-2023-4211 — kbase handshake pattern
+ * Man Yue Mo, "Bypassing MTE with CVE-2025-0072" — CSF queue flow analysis
+ * android.googlesource.com/kernel/google-modules/gpu — kbase kernel source
+
 ## Related
 
 [Panvk_Kmod](https://github.com/nangitagamer777-art/Panvk_Kmod) —
