@@ -1,72 +1,75 @@
 # PanVK-kbase Integration Guide
 
-Step-by-step guide to patch Mesa 26.2.0-rc2 with a kbase backend.
+Step-by-step guide to patch Mesa 26.2.0-rc2 with the kbase backend.
 
 ## Status: vkCreateDevice SUCCESS
 
-CSF queue lifecycle fully working:
+`vkCreateDevice` returns `VK_SUCCESS` on the tested Mali-G615 MC6.
 
-REGISTER (36) -> BIND (39) -> KICK (37) with 3 subqueues.
+The CSF queue lifecycle is working:
 
-The GPU execution path is handled directly through the proprietary kbase
-driver at `/dev/mali0`.
+    REGISTER (36) -> BIND (39) -> KICK (37)
+
+The tested configuration uses three subqueues.
 
 ## Prerequisites
 
 - Mesa 26.2.0-rc2 source tree
-- Android NDK r27+
-- Android cross-file `android-aarch64-35`
-- Device with `/dev/mali0`
+- Android NDK
+- Android AArch64 cross-compilation environment
+- Android device exposing `/dev/mali0`
 - Mali Valhall GPU
-- Access to `/dev/mali0`
+- Proprietary `mali_kbase` kernel driver
 
 ## Files modified
 
 ### pan_kmod.c
 
-- `kbase_dev_create()`:
-  - Opens `/dev/mali0`
-  - Performs kbase handshake
-  - Creates kbase context
-  - Creates queue group using cmd 42
-- `kbase_query_gpu_info()`:
-  - Reads `gpu_id`
-  - Reads `shader_present`
-- `kbase_cs_queue_create()`:
-  - Allocates ring memory using kbase MEM_ALLOC
-  - Registers CS queue with cmd 36
-  - Binds queue with cmd 39
-  - Maps user_io pages
-  - Handles the kbase `mmap_handle`
-- `kbase_cs_queue_submit()`:
-  - Copies command stream into ring
-  - Updates INSERT
-  - Sends CS_QUEUE_KICK cmd 37
-- `kbase` entry in the backend driver table
-- Fallback to `/dev/mali0` when `drmGetVersion()` fails
+Implements the kbase device backend.
 
-The `drmGetVersion()` failure is expected on the proprietary kbase device
-because `/dev/mali0` is not a normal Panthor DRM device.
+Important changes:
+
+- `kbase_dev_create()`
+- `/dev/mali0` fallback
+- kbase context creation
+- GPU property querying
+- GPU ID detection
+- `shader_present` detection
+- CS queue creation
+- CS queue registration
+- CS queue binding
+- `user_io` mmap
+- CS queue submission
+- queue KICK handling
+- kbase entry in the driver table
 
 ### pan_kmod.h
 
-- Declarations for:
-  - `kbase_cs_queue_create`
-  - `kbase_cs_queue_submit`
-- Forward declarations:
-  - `struct kbase_dev`
-  - `struct kbase_cs_queue`
+Contains declarations required by the kbase queue implementation.
+
+Important declarations:
+
+- `kbase_cs_queue_create`
+- `kbase_cs_queue_submit`
+
+Also contains the required forward declarations for the kbase queue
+structures.
 
 ### kbase_kmod.c
 
-Implements the required `pan_kmod_ops` for the kbase backend.
+Provides the kbase implementation of the `pan_kmod_ops` interface.
 
-Includes handling for:
+Implemented areas include:
 
 - device creation/destruction
 - BO allocation/free
 - VM creation/destruction
-- kbase ioctl communication
+- memory operations
+- kbase ioctl handling
+- queue group creation
+
+Important kbase ioctls include:
+
 - VERSION_CHECK (52)
 - SET_FLAGS (1)
 - MEM_ALLOC (5)
@@ -74,288 +77,321 @@ Includes handling for:
 
 ### panthor_kmod.c
 
-Contains the remaining fake_csif/scoreboard compatibility logic required by
-parts of PanVK that were originally written around the Panthor CSF path.
+Contains compatibility handling for Panthor-specific structures that are
+still referenced by existing PanVK code.
 
-It does not perform the actual GPU submission.
+The fake CSIF/scoreboard handling exists to satisfy the existing PanVK
+code path while actual queue submission is handled by kbase.
 
 ### panvk_vX_gpu_queue.c
 
-Panthor submission was replaced with the kbase submission path:
+The original Panthor submission path was replaced with the kbase CS queue
+path.
 
-```text
-Panthor DRM submit
-       |
-       v
-kbase_cs_queue_submit()
-       |
-       v
-CS_QUEUE_KICK
-       |
-       v
-/dev/mali0
+Important changes:
 
-Other adaptations include:
+- Panthor submission replaced by `kbase_cs_queue_submit`
+- `pandecode_next_frame` adapted for the kbase path
+- queue initialization adapted
+- kbase-compatible queue/group handling
+- `init_tiler` adapted
+- `create_group` adapted
+- `init_render_desc_ringbuf` adapted
+- kbase-compatible sync handling
+- unnecessary Panthor queue operations bypassed
 
-- "pandecode_next_frame" adapted for the kbase path
-- decode context checks
-- queue initialization adaptations
-- "init_tiler" adaptation
-- "create_group" adaptation
-- "init_render_desc_ringbuf" adaptation
-- "syncobj_handle = 0" for the kbase path
+### panvk_vX_device.c
 
-panvk_vX_device.c
+Device initialization changes for kbase.
 
-- "check_global_priority":
-  - MEDIUM priority fixed because kbase does not expose the same DRM priority
-    mechanism
-- "utrace_context_init" disabled/adapted
-- "utrace_perfetto_init" disabled/adapted
+Important changes:
 
-panvk_priv_bo.c
+- global priority handling adapted because the tested kbase driver does
+  not expose the same priority interface
+- MEDIUM priority handling fixed
+- utrace initialization paths bypassed where unsupported
+- Perfetto utrace initialization bypassed where unsupported
 
-Important memory handling fixes:
+### panvk_priv_bo.c
 
-- Correct handling of "PAN_KMOD_BO_FLAG_NO_MMAP"
-- mmap result checked before using the returned pointer
-- "memset" moved after the "MAP_FAILED" validation
+BO creation was adapted for kbase memory.
 
-This avoids writing through an invalid mmap result.
+Important changes:
 
-panvk_mempool.h
+- `PAN_KMOD_BO_FLAG_NO_MMAP` handling adjusted
+- mmap performed through the kbase backend
+- `MAP_FAILED` is checked before accessing the mapping
+- host memory initialization occurs only after a valid mapping exists
 
-Memory pool macros adapted for kbase compatibility.
+Important bug fixed:
 
-panvk_physical_device.c
+Previously, `memset()` could execute immediately after `mmap()` before
+checking whether the result was `MAP_FAILED`.
 
-- "create_kmod_dev()" accepts "drm_device=NULL"
-- Uses "/dev/mali0" through the kbase backend
-- "get_drm_device_ids()" handles the absence of a normal DRM device
-- "get_device_sync_types()" has a kbase-compatible fallback
+The corrected order is:
 
-panvk_instance.c
+    mmap()
+    check MAP_FAILED
+    memset()
 
-When no usable DRM device is discovered, PanVK can fall back to the kbase
-device at:
+This prevents an invalid mapping from being accessed.
 
-/dev/mali0
+### panvk_mempool.h
 
-pan_model.c / pan_model.h
+Contains memory-pool compatibility macros required by the kbase BO path.
 
-- Added Mali-G615 support
-- Added G615 variants 0 and 1
-- Fallback in "pan_get_model()" to avoid rejecting the detected GPU variant
-- Corrected hardware "gpu_id" handling
+### panvk_physical_device.c
 
-Panthor -> kbase mapping
+Physical-device initialization was modified to tolerate the absence of a
+normal DRM device.
 
-Original Panthor path| kbase path
-DRM queue submission| "CS_QUEUE_KICK"
-"drm_panthor_queue_submit"| "kbase_cs_queue_submit"
-Panthor queue registration| "CS_QUEUE_REGISTER"
-Panthor queue binding| "CS_QUEUE_BIND"
-Panthor BO allocation| kbase "MEM_ALLOC"
-Panthor user_io mapping| kbase "mmap_handle"
-Panthor GPU submission| "/dev/mali0" kbase ioctl
-DRM sync objects| "libkbase_drm.so" compatibility layer
+Important changes:
 
-The important distinction is that "libkbase_drm.so" is not replacing the kbase
-backend. It only satisfies the remaining DRM/libdrm interface expected by
-PanVK.
+- `drm_device == NULL` is accepted by the kbase path
+- `/dev/mali0` is used as the actual GPU backend
+- DRM device enumeration failure no longer prevents kbase initialization
+- device sync handling has a kbase-compatible fallback
 
-libkbase_drm.so
+### panvk_instance.c
 
-Source:
+Instance initialization contains a fallback to `/dev/mali0` when normal
+DRM device enumeration does not produce a usable Panthor device.
 
-~/Panvk_Kmod/src/libkbase_drm.c
+### pan_model.c
 
-There is also a copy/reference under:
+Adds Mali-G615 model handling.
 
-~/Panvk_Kmod/tools/libkbase_drm.c
+The tested GPU ID is:
 
-The current runtime library is:
+    0xA8070000
 
-libkbase_drm.so
+The model lookup also handles the GPU variant used by the tested device.
 
-Its purpose is to provide the remaining DRM symbols that PanVK still reaches.
+### pan_model.h
 
-Examples include:
+Contains the hardware ID definitions and model declarations required by
+the Mali-G615 support.
 
-- "drmGetDevices2"
-- "drmSyncobjCreate"
-- "drmSyncobjDestroy"
-- "drmSyncobjWait"
-- "drmSyncobjTimelineWait"
-- "drmSyncobjExportSyncFile"
-- "drmSyncobjImportSyncFile"
-- "drmSyncobjReset"
-- "drmSyncobjTransfer"
-- "drmGetCap"
-- "drmIoctl"
-- "drmCloseBufferHandle"
-- "drmPrimeFDToHandle"
-- "drmPrimeHandleToFD"
+### meson.build
 
-Some calls are forwarded to the real "libdrm"; others are minimal
-compatibility implementations.
+Integrates the kbase backend source into the Mesa PanVK build.
 
-Why it is required
+## Kbase CS queue flow
 
-Without the shim:
+The working queue flow is:
 
-[kbase] trying fallback to /dev/mali0...
-[kbase] drmGetVersion failed on /dev/mali0, trying kbase backend anyway
-[kbase] device ready, fd=4 ...
-[kbase] after get_drm_device_ids: result=0
-Segmentation fault
+    MEM_ALLOC
+        |
+        v
+    CS_QUEUE_REGISTER
+        |
+        v
+    CS_QUEUE_BIND
+        |
+        v
+    user_io mmap
+        |
+        v
+    write command stream
+        |
+        v
+    update INSERT
+        |
+        v
+    CS_QUEUE_KICK
 
-With the shim:
+The tested kbase r44 scheduler requires:
 
-=== TEST COMPLETED ===
-vkCreateDevice returned: 0
-STATUS: SUCCESS (Device Created)
+    QUEUE_GROUP_CREATE_1_6 (42)
 
-Therefore "libkbase_drm.so" is currently a required runtime component.
+## GPU identification
 
-libkbase_scudo_fix.so
+The GPU ID is decoded using:
 
-The Scudo fix is currently not required.
+    (arch_major << 28) |
+    (arch_minor << 24) |
+    (prod_major << 16)
 
-Source:
+For the Mali-G615 used during development:
 
-~/Panvk_Kmod/src/libkbase_scudo_fix.c
+    0xA8070000
 
-It intercepts "mprotect()" and ignores "EPERM", but testing showed that
-"vkCreateDevice()" succeeds without loading this library.
+The shader-present mask is obtained from the GPU properties returned by
+the kbase driver.
 
-Therefore the normal runtime should NOT include:
+## User IO mapping
 
-libkbase_scudo_fix.so
+The kbase queue `user_io` mapping requires:
 
-Only "libkbase_drm.so" is required by the current working configuration.
+    BASEP_QUEUE_NR_MMAP_USER_PAGES = 3
 
-Build
+`CS_QUEUE_BIND` supplies the `mmap_handle` used for this mapping.
 
-From the Mesa source tree:
+The `mmap_handle` is a mapping handle and must not be confused with the
+GPU virtual address.
 
-cd ~/PanVK-kbase
+## Ring buffer
 
-Configure:
+The ring buffer uses its GPU virtual address as the mmap offset in the
+tested kbase implementation.
 
-meson setup build --wipe --cross-file=android-aarch64-35 android-stub=true -Dplatforms=panfrost -Dgallium-drivers=panfrost -Dllvm=false -Dmesa-clc=system -Dprecompiled-compiler=system -Degl=true -Dzstd=false
+## Queue submission
 
-Build PanVK:
+The command stream is copied into the ring buffer.
 
-ninja -C build src/panfrost/vulkan/libvulkan_panfrost.so
+The INSERT position is updated.
 
-Output:
+Then:
 
-build/src/panfrost/vulkan/libvulkan_panfrost.so
+    CS_QUEUE_KICK (37)
 
-Runtime test
+is issued.
 
-On the Android device:
+The tested queue path does not require an END opcode.
 
-cd /data/local/tmp
-LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so ./vk_final_test
+## Panthor to kbase mapping
 
-Do not include "libkbase_scudo_fix.so" in the normal test.
+| Panthor | kbase |
+|---------|-------|
+| `DRM_IOCTL_PANTHOR_GROUP_SUBMIT` | `CS_QUEUE_KICK` |
+| `drm_panthor_queue_submit` | `kbase_cs_queue_submit` |
+| Panthor BO allocation | kbase `MEM_ALLOC` |
+| Panthor queue registration | `CS_QUEUE_REGISTER` |
+| Panthor queue binding | `CS_QUEUE_BIND` |
+| Panthor user_io | kbase `mmap_handle` |
+| Panthor GPU submission | kbase queue KICK |
+| Panthor DRM device | `/dev/mali0` |
+| DRM syncobj interface | compatibility symbols |
 
-Expected result
+The important distinction is that the kbase backend performs the actual
+GPU execution.
 
-=== TEST COMPLETED ===
-vkCreateDevice returned: 0
-STATUS: SUCCESS (Device Created)
+The DRM compatibility layer does not replace the kbase backend.
 
-Test device
+## DRM compatibility layer
+
+The standalone DRM compatibility source is:
+
+    ~/Panvk_Kmod/src/libkbase_drm.c
+
+It is compiled into:
+
+    libkbase_drm.so
+
+The purpose of this library is to provide DRM symbols that PanVK/Mesa
+still expects to resolve.
+
+The current source contains compatibility implementations for functions
+including:
+
+- `drmGetDevices2`
+- `drmSyncobjCreate`
+- `drmSyncobjDestroy`
+- `drmSyncobjWait`
+- `drmSyncobjTimelineWait`
+- `drmSyncobjExportSyncFile`
+- `drmSyncobjImportSyncFile`
+- `drmSyncobjReset`
+- `drmSyncobjTransfer`
+- `drmGetCap`
+- `drmIoctl`
+- `drmCloseBufferHandle`
+- `drmPrimeFDToHandle`
+- `drmPrimeHandleToFD`
+
+The actual GPU work remains in the kbase backend.
+
+## Testing without libkbase_drm.so
+
+The DRM compatibility layer was tested independently.
+
+Running:
+
+    cd /data/local/tmp
+    LD_LIBRARY_PATH=/data/local/tmp ./vk_final_test
+
+reaches kbase initialization:
+
+    [kbase] trying fallback to /dev/mali0...
+    [kbase] drmGetVersion failed on /dev/mali0, trying kbase backend anyway
+    [kbase] device ready, fd=4 ...
+    [kbase] after get_drm_device_ids: result=0
+
+but then produces:
+
+    Segmentation fault
+
+Therefore the current working runtime still requires
+`libkbase_drm.so`.
+
+This does not mean DRM is being used for actual GPU submission.
+It means some later PanVK/Mesa code still depends on the DRM-facing
+interface or symbols.
+
+## Scudo compatibility layer
+
+The standalone Scudo workaround is:
+
+    ~/Panvk_Kmod/src/libkbase_scudo_fix.c
+
+It intercepts `mprotect()` and ignores `EPERM`.
+
+The resulting library is:
+
+    libkbase_scudo_fix.so
+
+It was tested and found unnecessary for the current successful
+`vkCreateDevice` path.
+
+Current working runtime:
+
+    LD_LIBRARY_PATH=/data/local/tmp \
+    LD_PRELOAD=libkbase_drm.so \
+    ./vk_final_test
+
+No Scudo fix is required for this test.
+
+## Build configuration
+
+Configure Mesa:
+
+    meson setup build --wipe --cross-file=android-aarch64-35 android-stub=true -Dplatforms=panfrost -Dgallium-drivers=panfrost -Dllvm=false -Dmesa-clc=system -Dprecompiled-compiler=system -Degl=true -Dzstd=false
+
+Build:
+
+    ninja -C build src/panfrost/vulkan/libvulkan_panfrost.so
+
+Result:
+
+    build/src/panfrost/vulkan/libvulkan_panfrost.so
+
+## Runtime test
+
+Current working configuration:
+
+    cd /data/local/tmp
+    LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so ./vk_final_test
+
+Expected:
+
+    === TEST COMPLETED ===
+    vkCreateDevice returned: 0
+    STATUS: SUCCESS (Device Created)
+
+## Test hardware
 
 - Poco X6 Pro
 - MediaTek Dimensity 8300
 - Mali-G615 MC6
 - Valhall
 - CSF firmware
-- Kernel driver: "mali_kbase_mt6897_r44"
+- Proprietary kbase kernel driver
+- `/dev/mali0`
 
-Key discoveries
+## Related project
 
-1. G615 "gpu_id":
+Panvk_Kmod — standalone kbase shim and GPU execution tests.
 
-0xA8070000
-
-2. "gpu_id" format:
-
-(arch_major << 28) |
-(arch_minor << 24) |
-(prod_major << 16)
-
-3. "shader_present" comes from "KBASE_IOCTL_GET_GPUPROPS".
-
-4. "GPU_EX" ("1 << 4") is mandatory for the CSF queue buffers.
-
-5. "BASEP_QUEUE_NR_MMAP_USER_PAGES = 3" is required for user_io mmap.
-
-6. "CS_QUEUE_BIND" returns an "mmap_handle" used for user_io mapping.
-
-7. The "mmap_handle" is not the GPU virtual address.
-
-8. The ring buffer uses the GPU VA as the mmap offset where required by the
-   kbase interface.
-
-9. cmd 42 ("QUEUE_GROUP_CREATE_1_6") is required for the r44 scheduler.
-
-10. No END opcode is required; the GPU runs until INSERT reaches EXTRACT.
-
-11. PanVK can continue when "drmGetVersion()" fails on "/dev/mali0".
-
-12. The remaining DRM symbols used by PanVK still need to be supplied.
-
-13. "libkbase_drm.so" supplies those compatibility symbols.
-
-14. Removing "libkbase_drm.so" currently causes a segmentation fault after
-    "get_drm_device_ids()".
-
-15. "libkbase_scudo_fix.so" is not required for "vkCreateDevice()" success.
-
-Current architecture
-
-                         PanVK
-                           |
-              +------------+------------+
-              |                         |
-              v                         v
-       kbase backend              DRM compatibility
-       pan_kmod.c                 libkbase_drm.so
-              |                         |
-              v                         v
-        /dev/mali0                remaining DRM
-              |                    symbols/calls
-              v
-         kbase ioctls
-              |
-              v
-          Mali-G615
-              |
-              v
-          CSF queues
-       REGISTER/BIND/KICK
-
-The kbase backend is the actual GPU backend.
-
-"libkbase_drm.so" is only the compatibility layer required to keep PanVK's
-remaining DRM-facing code paths satisfied.
-
-Credits
-
-Noin Haxel ("@nangitagamer777-art" (https://github.com/nangitagamer777-art))
-
-DeepSeek AI, Claude AI
-
-Related
-
-"Panvk_Kmod" (https://github.com/nangitagamer777-art/Panvk_Kmod) — Standalone
-kbase shim with GPU execution tests.
-
-License
+## License
 
 MIT
