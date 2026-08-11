@@ -188,7 +188,7 @@ of the required runtime path at the current stage.
 ## Related
 
 [Panvk_Kmod](https://github.com/nangitagamer777-art/Panvk_Kmod) —
-standalone kbase shim with GPU execution tests.
+Repository of the driver already compiled for use.
 
 ## License
 
