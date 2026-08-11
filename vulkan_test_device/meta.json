@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "name": "PanVK Mesa 26.2",
+  "author": "NoinHaxel",
+  "deviceName": "ARM Mali Valhall",
+  "driverVersion": "26.2.0-rc2",
+  "vulkanVersion": "1.4.0",
+  "minApi": 29,
+  "libraryName": "libvulkan_panfrost.so"
+}
