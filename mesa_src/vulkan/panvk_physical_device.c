@@ -308,6 +308,7 @@ get_device_heaps(struct panvk_physical_device *device,
       PANVK_DEBUG(NO_EXTENDED_VA_RANGE) ? 1ull << 32 : 1ull << 48;
    device->memory.max_supported_va =
       pan_clamp_to_usable_va_range(device->kmod.dev, request_va);
+   device->memory.max_supported_va = 0x200000000ULL; /* 8 GB for kbase */
 
    return VK_SUCCESS;
 }

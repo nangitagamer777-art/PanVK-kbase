@@ -785,6 +785,12 @@ void pan_kmod_queue_bo_map_sync(struct pan_kmod_bo *bo, uint64_t bo_offset,
                                 enum pan_kmod_bo_sync_type type);
 
 void pan_kmod_flush_bo_map_syncs(struct pan_kmod_dev *dev);
+/* ── kbase CS queue ── */
+struct kbase_cs_queue;
+struct kbase_dev;
+int kbase_cs_queue_create(struct pan_kmod_dev *dev);
+int kbase_cs_queue_submit(struct pan_kmod_dev *dev, uint64_t stream_gpu_addr, void *stream_cpu_addr, uint32_t stream_size);
+
 
 static inline void
 pan_kmod_set_bo_label(struct pan_kmod_dev *dev, struct pan_kmod_bo *bo, const char *label)

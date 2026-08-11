@@ -1304,13 +1304,36 @@ panthor_kmod_get_flush_id(const struct pan_kmod_dev *dev)
 const struct drm_panthor_csif_info *
 panthor_kmod_get_csif_props(const struct pan_kmod_dev *dev)
 {
-    if (dev->ops != &panthor_kmod_ops) {
-        static int fake_csif[32] = { [0] = 8 };
-        return (const struct drm_panthor_csif_info *)fake_csif;
-    }
+   if (dev->ops != &panthor_kmod_ops) {
+      static const struct drm_panthor_csif_info fake_csif = {
+         .csg_slot_count = 8,
+         .cs_slot_count = 8,
+         .cs_reg_count = 96,
+         .scoreboard_slot_count = 8,
+         .unpreserved_cs_reg_count = 8,
+         .pad = 0,
+      };
+      fprintf(stderr,
+              "[kbase_dbg] using fake_csif: ptr=%p csg=%u cs=%u regs=%u scoreboard=%u unpreserved=%u\n",
+              &fake_csif,
+              fake_csif.csg_slot_count,
+              fake_csif.cs_slot_count,
+              fake_csif.cs_reg_count,
+              fake_csif.scoreboard_slot_count,
+              fake_csif.unpreserved_cs_reg_count);
+      return &fake_csif;
+   }
    struct panthor_kmod_dev *panthor_dev =
       container_of(dev, struct panthor_kmod_dev, base);
 
+   fprintf(stderr,
+        "[kbase_dbg] using real csif: ptr=%p csg=%u cs=%u regs=%u scoreboard=%u unpreserved=%u\n",
+        &panthor_dev->props.csif,
+        panthor_dev->props.csif.csg_slot_count,
+        panthor_dev->props.csif.cs_slot_count,
+        panthor_dev->props.csif.cs_reg_count,
+        panthor_dev->props.csif.scoreboard_slot_count,
+        panthor_dev->props.csif.unpreserved_cs_reg_count);
    return &panthor_dev->props.csif;
 }
 

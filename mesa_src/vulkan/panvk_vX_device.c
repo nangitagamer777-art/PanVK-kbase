@@ -188,18 +188,22 @@ static VkResult
 check_global_priority(const struct panvk_physical_device *phys_dev,
                       const VkDeviceQueueCreateInfo *create_info)
 {
+   fprintf(stderr, "[kbase] entered check_global_priority\n");
+   fprintf(stderr, "[kbase] check_global_priority: phys_dev=%p, phys_dev->kmod.dev=%p\n", phys_dev, phys_dev ? phys_dev->kmod.dev : NULL);
    const unsigned arch = pan_arch(phys_dev->kmod.dev->props.gpu_id);
-   const VkDeviceQueueGlobalPriorityCreateInfoKHR *priority_info =
-      vk_find_struct_const(create_info->pNext,
-                           DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_KHR);
-   const VkQueueGlobalPriorityKHR priority =
-      priority_info ? priority_info->globalPriority
-                    : VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
+   fprintf(stderr, "[kbase] after pan_arch, arch=%u\n", arch);
+   /* Kbase backend does not support VK_KHR_global_priority yet.
+    * Always use MEDIUM priority for queue creation.
+    */
+   VkQueueGlobalPriorityKHR priority = VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_KHR;
+   fprintf(stderr, "[kbase] forced priority=MEDIUM (%d)\n", priority);
 
    switch (create_info->queueFamilyIndex) {
    case PANVK_QUEUE_FAMILY_GPU: {
+   fprintf(stderr, "[kbase] before global_priority_to_group_allow_priority_flag, priority=%d\n", priority);
       enum pan_kmod_group_allow_priority_flags requested_prio =
          global_priority_to_group_allow_priority_flag(priority);
+   fprintf(stderr, "[kbase] after global_priority_to_group_allow_priority_flag, requested_prio=%d\n", requested_prio);
       enum pan_kmod_group_allow_priority_flags allowed_prio_mask =
          phys_dev->kmod.dev->props.allowed_group_priorities_mask;
 
@@ -277,6 +281,7 @@ panvk_queue_create(struct panvk_device *dev,
                    uint32_t queue_idx,
                    struct vk_queue **out_queue)
 {
+   fprintf(stderr, "[kbase] entered panvk_queue_create, family=%d idx=%d\n", create_info->queueFamilyIndex, queue_idx);
    switch (create_info->queueFamilyIndex) {
    case PANVK_QUEUE_FAMILY_GPU:
       return panvk_per_arch(create_gpu_queue)(
@@ -435,7 +440,7 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
       user_va_end = split_point;
    }
 
-   const uint64_t low_va_end = 1ull << 32;
+   const uint64_t low_va_end = 2ull << 32;
    if (user_va_end <= low_va_end) {
       /* if user_va_end overlaps with the low 32bits, share the AS for both. */
       util_vma_heap_init(&device->as.heap, user_va_start,
@@ -458,8 +463,8 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
    panvk_device_init_mempools(device);
     fprintf(stderr, "[kbase] after mempools init\n");
 
-#if 0 /* kbase: disable dump region */
-    device->dump_region_size = vk_zalloc(&device->vk.alloc, PANVK_SUBQUEUE_COUNT * sizeof(uint32_t),
+#if 1 /* kbase: re-enable dump region */
+    device->dump_region_size = vk_zalloc(&device->vk.alloc, 3 * sizeof(uint32_t),
                                  alignof(uint32_t), VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
     if (!device->dump_region_size) {
         result = panvk_error(device, VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -546,10 +551,14 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
    if (result != VK_SUCCESS)
       goto err_free_draw_ctx;
 
+   fprintf(stderr, "[kbase] about to create queues, count=%d\n",
+           pCreateInfo->queueCreateInfoCount);
    for (unsigned i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
       const VkDeviceQueueCreateInfo *queue_create =
          &pCreateInfo->pQueueCreateInfos[i];
+      fprintf(stderr, "[kbase] queue_create[%d] = %p, queueCount=%d\n", i, queue_create, queue_create->queueCount);
 
+      fprintf(stderr, "[kbase] before check_global_priority, phys_dev=%p, phys_dev->kmod.dev=%p\n", physical_device, physical_device->kmod.dev);
       result = check_global_priority(physical_device, queue_create);
       if (result != VK_SUCCESS)
          goto err_finish_queues;
@@ -562,14 +571,16 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
       }
    }
 
-   result = panvk_per_arch(utrace_context_init)(device);
-   if (result != VK_SUCCESS)
-      goto err_finish_queues;
-
+//    fprintf(stderr, "[kbase] before utrace_context_init\n");
+//    result = panvk_per_arch(utrace_context_init)(device);
+//    if (result != VK_SUCCESS)
+//       goto err_finish_queues;
+// 
 #if PAN_ARCH >= 10
-   panvk_utrace_perfetto_init(device, PANVK_SUBQUEUE_COUNT);
+//    fprintf(stderr, "[kbase] before utrace_perfetto_init\n");
+//    panvk_utrace_perfetto_init(device, PANVK_SUBQUEUE_COUNT);
 #else
-   panvk_utrace_perfetto_init(device, 2);
+//    panvk_utrace_perfetto_init(device, 2);
 #endif
 
    *pDevice = panvk_device_to_handle(device);

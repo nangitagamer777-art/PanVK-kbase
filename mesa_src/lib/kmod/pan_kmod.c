@@ -45,7 +45,50 @@ union kbase_cqgc_16 {
 
 /* ── kbase device ── */
 struct kbase_kmod_vm { struct pan_kmod_vm base; struct util_vma_heap heap; };
-struct kbase_dev { struct pan_kmod_dev base; uint8_t group; uint32_t ctx; };
+/* ── kbase CS queue UAPI definitions ── */
+struct kbase_ioctl_cs_queue_register {
+    __u64 buffer_gpu_addr;
+    __u32 buffer_size;
+    __u8  priority;
+    __u8  padding[3];
+};
+
+#define KBASE_IOCTL_CS_QUEUE_REGISTER     _IOW(KBASE_IOCTL_TYPE, 36, struct kbase_ioctl_cs_queue_register)
+
+struct kbase_ioctl_cs_queue_kick {
+    __u64 buffer_gpu_addr;
+};
+
+#define KBASE_IOCTL_CS_QUEUE_KICK     _IOW(KBASE_IOCTL_TYPE, 37, struct kbase_ioctl_cs_queue_kick)
+
+union kbase_ioctl_cs_queue_bind {
+    struct {
+        __u64 buffer_gpu_addr;
+        __u8  group_handle;
+        __u8  csi_index;
+        __u8  padding[6];
+    } in;
+    struct {
+        __u64 mmap_handle;
+    } out;
+};
+
+#define KBASE_IOCTL_CS_QUEUE_BIND     _IOWR(KBASE_IOCTL_TYPE, 39, union kbase_ioctl_cs_queue_bind)
+
+/* ── kbase CS queue ── */
+struct kbase_cs_queue {
+    void *ring;
+    uint64_t ring_gpu_va;
+    size_t ring_size;
+    void *user_io;
+    uint64_t user_io_gpu_va;
+    uint32_t *input_page;
+    uint32_t *output_page;
+    uint64_t mmap_handle;
+    bool created;
+};
+
+struct kbase_dev { struct pan_kmod_dev base; uint8_t group; uint32_t ctx; struct kbase_cs_queue cs_queue; };
 
 struct kbase_gpu_info { uint64_t gpu_id; uint64_t shader_present; };
 static struct kbase_gpu_info kbase_query_gpu_info(int fd) {
@@ -104,6 +147,7 @@ kbase_dev_create(int fd, uint32_t flags, const struct pan_kmod_driver *drv, cons
     kd->base.props.gpu_id = info.gpu_id ? info.gpu_id : 0xA8070000;
     kd->base.props.shader_present = info.shader_present ? info.shader_present : 0x3F;
     kd->base.props.pgsize_bitmap = 0x1;
+    kd->base.props.allowed_group_priorities_mask = PAN_KMOD_GROUP_ALLOW_PRIORITY_MEDIUM;
     fprintf(stderr, "[kbase] device ready, fd=%d group=%u ctx=%u gpu_id=0x%llx shader=0x%llx\n", fd, kd->group, kd->ctx, (unsigned long long)kd->base.props.gpu_id, (unsigned long long)kd->base.props.shader_present);
     /* Force kbase ops - Mesa may overwrite them */
     kd->base.ops = &kbase_kmod_ops;
@@ -132,7 +176,7 @@ static struct pan_kmod_vm *kbase_vm_create(struct pan_kmod_dev *dev, uint32_t fl
     struct kbase_kmod_vm *kvm = calloc(1, sizeof(*kvm));
     if (!kvm) return NULL;
     pan_kmod_vm_init(&kvm->base, dev, 0, flags | PAN_KMOD_VM_FLAG_AUTO_VA);
-    util_vma_heap_init(&kvm->heap, 0x100000000ULL, 0x100000000ULL);
+    util_vma_heap_init(&kvm->heap, 0x100000000ULL, 0x400000000ULL);
     fprintf(stderr, "[kbase] kbase_vm_create: heap init ok\n");
     return &kvm->base;
 }
@@ -156,6 +200,77 @@ static int kbase_vm_bind(struct pan_kmod_vm *vm, enum pan_kmod_vm_op_mode mode, 
     }
     return 0;
 }
+/* ── kbase CS queue create ── */
+int kbase_cs_queue_create(struct pan_kmod_dev *dev) {
+    struct kbase_dev *kd = (struct kbase_dev *)dev;
+    struct kbase_cs_queue *q = &kd->cs_queue;
+    if (q->created) return 0;
+    int fd = kd->base.fd;
+
+    /* MEM_ALLOC directo para ring (evita truncamiento 64->32 bits) */
+    size_t ring_size = 64 * 1024;
+    union kbase_ma mem = {0};
+    mem.in.va_pages = (ring_size + 4095) / 4096;
+    mem.in.commit_pages = mem.in.va_pages;
+    mem.in.flags = BASE_MEM_PROT_CPU_RD | BASE_MEM_PROT_CPU_WR | BASE_MEM_PROT_GPU_RD | BASE_MEM_PROT_GPU_EX;
+    if (ioctl(fd, KBASE_IOCTL_MEM_ALLOC, &mem) < 0) { fprintf(stderr, "[kbase] ring MEM_ALLOC failed: %m\n"); return -1; }
+    q->ring = mmap(NULL, ring_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (off_t)mem.out.gpu_va);
+    if (q->ring == MAP_FAILED) { fprintf(stderr, "[kbase] ring mmap failed: %m\n"); return -1; }
+    q->ring_gpu_va = mem.out.gpu_va;
+    q->ring_size = ring_size;
+
+    size_t user_io_size = 3 * 4096;  /* BASEP_QUEUE_NR_MMAP_USER_PAGES = 3 */
+    struct pan_kmod_bo *user_io_bo = kbase_bo_alloc(dev, NULL, user_io_size, BASE_MEM_PROT_GPU_EX);
+    if (!user_io_bo) { fprintf(stderr, "[kbase] user_io BO alloc failed\n"); return -1; }
+    /* user_io mmap movido después del BIND */
+    q->user_io_gpu_va = user_io_bo->handle;
+
+    struct kbase_ioctl_cs_queue_register reg = {
+        .buffer_gpu_addr = q->ring_gpu_va, .buffer_size = q->ring_size, .priority = 0,
+    };
+    if (ioctl(fd, KBASE_IOCTL_CS_QUEUE_REGISTER, &reg) < 0) { fprintf(stderr, "[kbase] REGISTER failed: %m\n"); return -1; }
+
+    union kbase_ioctl_cs_queue_bind bind = {
+        .in = { .buffer_gpu_addr = q->ring_gpu_va, .group_handle = kd->group, .csi_index = 0, },
+    };
+    if (ioctl(fd, KBASE_IOCTL_CS_QUEUE_BIND, &bind) < 0) { fprintf(stderr, "[kbase] BIND failed: %m\n"); return -1; }
+    q->mmap_handle = bind.out.mmap_handle;
+    fprintf(stderr, "[kbase] BIND: ring_gpu_va=0x%llx mmap_handle=0x%llx\n",
+            (unsigned long long)q->ring_gpu_va, (unsigned long long)q->mmap_handle);
+    q->user_io = mmap(NULL, user_io_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, (off_t)q->mmap_handle);
+    if (q->user_io == MAP_FAILED) { fprintf(stderr, "[kbase] user_io mmap failed: %m\n"); return -1; }
+    q->input_page = (uint32_t *)q->user_io;
+    q->output_page = (uint32_t *)((uint8_t *)q->user_io + 4096);
+    *q->input_page = 0;
+    *q->output_page = 0;
+    q->created = true;
+    fprintf(stderr, "[kbase] CS queue created: ring=0x%llx user_io=0x%llx\n",
+            (unsigned long long)q->ring_gpu_va, (unsigned long long)q->user_io_gpu_va);
+    return 0;
+}
+
+/* ── kbase CS queue submit ── */
+int kbase_cs_queue_submit(struct pan_kmod_dev *dev, uint64_t stream_gpu_addr, void *stream_cpu_addr, uint32_t stream_size) {
+    struct kbase_dev *kd = (struct kbase_dev *)dev;
+    struct kbase_cs_queue *q = &kd->cs_queue;
+    if (!q->created) { int cret = kbase_cs_queue_create(dev); if (cret < 0) return -1; }
+    int fd = kd->base.fd;
+
+    uint32_t insert = *q->input_page;
+    uint32_t ring_mask = q->ring_size - 1;
+    uint8_t *ring = (uint8_t *)q->ring;
+
+    memcpy(ring + insert, stream_cpu_addr, stream_size);
+
+    insert = (insert + stream_size) & ring_mask;
+    *q->input_page = insert;
+
+    struct kbase_ioctl_cs_queue_kick kick = { .buffer_gpu_addr = q->ring_gpu_va };
+    if (ioctl(fd, KBASE_IOCTL_CS_QUEUE_KICK, &kick) < 0) { fprintf(stderr, "[kbase] KICK failed: %m\n"); return -1; }
+    fprintf(stderr, "[kbase] submit: size=%u insert=%u\n", stream_size, insert);
+    return 0;
+}
+
 const struct pan_kmod_ops kbase_kmod_ops = {
     .dev_create = kbase_dev_create, .dev_destroy = kbase_dev_destroy,
     .bo_alloc = kbase_bo_alloc, .bo_free = kbase_bo_free, .bo_import = kbase_bo_import,
