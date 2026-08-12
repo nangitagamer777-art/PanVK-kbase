@@ -19,7 +19,7 @@ CSF queue lifecycle fully working: REGISTER -> BIND -> KICK with 3 subqueues.
 | `pan_kmod.c` | Backend implementing `pan_kmod_ops` via `/dev/mali0` ioctls |
 | `pan_kmod.h` | Declarations for `kbase_cs_queue_create` and `kbase_cs_queue_submit` |
 | `kbase_kmod.c` | kbase backend implementing the `pan_kmod_ops` interface |
-| `panthor_kmod.c` | fake_csif scoreboard compatibility hack |
+| `panthor_kmod.c` | csif real and functional integration of kbase |
 | `panvk_vX_gpu_queue.c` | GPU queue: kbase submit, pandecode adapted for kbase |
 | `panvk_vX_device.c` | Device init: utrace handling and priority compatibility |
 | `panvk_priv_bo.c` | BO creation: NO_MMAP handling and safe mmap initialization |
