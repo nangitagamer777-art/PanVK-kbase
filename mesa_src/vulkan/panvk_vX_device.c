@@ -137,14 +137,22 @@ panvk_meta_cmd_bind_map_buffer(struct vk_command_buffer *cmd,
 static VkResult
 panvk_meta_init(struct panvk_device *device)
 {
-    fprintf(stderr, "[kbase] panvk_meta_init: skipping (kbase backend)\n");
-    return VK_SUCCESS;
+   VkResult result = vk_meta_device_init(&device->vk, &device->meta);
+   if (result != VK_SUCCESS)
+      return result;
+   fprintf(stderr, "[kbase] meta_init: real init done\n");
+   return VK_SUCCESS;
 }
 
 static void
 panvk_meta_cleanup(struct panvk_device *device)
 {
-    vk_meta_device_finish(&device->vk, &device->meta);
+    fprintf(stderr, "[kbase] meta_cleanup: meta->cache=%p\n", (void*)device->meta.cache);
+    if (device->meta.cache) {
+       fprintf(stderr, "[kbase] meta_cleanup: BEFORE vk_meta_device_finish\n");
+       vk_meta_device_finish(&device->vk, &device->meta);
+       fprintf(stderr, "[kbase] meta_cleanup: AFTER vk_meta_device_finish\n");
+    }
 }
 static VkResult
 panvk_precomp_init(struct panvk_device *device)
@@ -518,6 +526,7 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
     fprintf(stderr, "[kbase] about to call u_printf_init, printf.bo=%p addr.host=%p\n", device->printf.bo, device->printf.bo->addr.host);
    u_printf_init(&device->printf.ctx, device->printf.bo,
                  device->printf.bo->addr.host);
+   fprintf(stderr, "[kbase] u_printf_init DONE, ctx=%p\n", (void*)&device->printf.ctx);
 
    device->drm_fd = device->kmod.dev->fd;
    vk_device_set_drm_fd(&device->vk, device->kmod.dev->fd);
@@ -643,19 +652,30 @@ panvk_per_arch(destroy_device)(struct panvk_device *device,
    if (!device)
       return;
 
+   fprintf(stderr, "[kbase] destroy: step 1 utrace_context_fini done\n");
    panvk_per_arch(utrace_context_fini)(device);
+   fprintf(stderr, "[kbase] destroy: step 2 utrace done, about to destroy queues\n");
 
    vk_foreach_queue_safe(queue, &device->vk)
       panvk_queue_destroy(queue);
+   fprintf(stderr, "[kbase] destroy: step 3 queues destroyed\n");
 
    panvk_precomp_cleanup(device);
+   fprintf(stderr, "[kbase] destroy: step 4 precomp done\n");
 #if PAN_ARCH >= 10 && PAN_ARCH < 14
+   fprintf(stderr, "[kbase] destroy: step 5 draw context cleanup\n");
    panvk_per_arch(device_draw_context_cleanup)(device);
 #endif
+   fprintf(stderr, "[kbase] destroy: step 6 meta cleanup\n");
    panvk_meta_cleanup(device);
+   fprintf(stderr, "[kbase] destroy: step 7 pipeline cache\n");
    vk_pipeline_cache_destroy(device->vk.mem_cache, NULL);
-   pan_kmod_bo_put(device->sparse_mem.blackhole);
+   fprintf(stderr, "[kbase] destroy: step 8 blackhole\n");
+   if (device->sparse_mem.blackhole)
+      pan_kmod_bo_put(device->sparse_mem.blackhole);
+   fprintf(stderr, "[kbase] destroy: step 9 printf, ctx=%p\n", (void*)&device->printf.ctx);
    u_printf_destroy(&device->printf.ctx);
+   fprintf(stderr, "[kbase] destroy: step 9b printf destroyed\n");
    panvk_priv_bo_unref(device->printf.bo);
    panvk_priv_bo_unref(device->tiler_oom.handlers_bo);
    panvk_priv_bo_unref(device->indirect_varying_buffer);

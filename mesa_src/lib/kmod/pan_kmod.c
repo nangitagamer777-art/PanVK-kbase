@@ -61,6 +61,9 @@ struct kbase_ioctl_cs_queue_kick {
 
 #define KBASE_IOCTL_CS_QUEUE_KICK     _IOW(KBASE_IOCTL_TYPE, 37, struct kbase_ioctl_cs_queue_kick)
 
+struct kbase_ioctl_cs_queue_terminate { __u64 buffer_gpu_addr; };
+#define KBASE_IOCTL_CS_QUEUE_TERMINATE _IOW(KBASE_IOCTL_TYPE, 41, struct kbase_ioctl_cs_queue_terminate)
+
 union kbase_ioctl_cs_queue_bind {
     struct {
         __u64 buffer_gpu_addr;
@@ -177,7 +180,11 @@ static struct pan_kmod_vm *kbase_vm_create(struct pan_kmod_dev *dev, uint32_t fl
     if (!kvm) return NULL;
     pan_kmod_vm_init(&kvm->base, dev, 0, flags | PAN_KMOD_VM_FLAG_AUTO_VA);
     util_vma_heap_init(&kvm->heap, 0x100000000ULL, 0x400000000ULL);
-    fprintf(stderr, "[kbase] kbase_vm_create: heap init ok\n");
+    /* kbase: create sparse dummy BO for PAN_KMOD_BO_FLAG_NO_MMAP compatibility */
+    kvm->base.sparse_dummy.bo = pan_kmod_bo_alloc(dev, NULL, 2 * 1024 * 1024,
+                                                   PAN_KMOD_BO_FLAG_NO_MMAP);
+    fprintf(stderr, "[kbase] kbase_vm_create: heap init ok, sparse_dummy=%p\n",
+            (void*)kvm->base.sparse_dummy.bo);
     return &kvm->base;
 }
 
@@ -268,6 +275,22 @@ int kbase_cs_queue_submit(struct pan_kmod_dev *dev, uint64_t stream_gpu_addr, vo
     struct kbase_ioctl_cs_queue_kick kick = { .buffer_gpu_addr = q->ring_gpu_va };
     if (ioctl(fd, KBASE_IOCTL_CS_QUEUE_KICK, &kick) < 0) { fprintf(stderr, "[kbase] KICK failed: %m\n"); return -1; }
     fprintf(stderr, "[kbase] submit: size=%u insert=%u\n", stream_size, insert);
+    return 0;
+}
+
+/* ── kbase CS queue destroy ── */
+int kbase_cs_queue_destroy(struct pan_kmod_dev *dev) {
+    struct kbase_dev *kd = (struct kbase_dev *)dev;
+    struct kbase_cs_queue *q = &kd->cs_queue;
+    if (!q->created) return 0;
+    int fd = kd->base.fd;
+    struct kbase_ioctl_cs_queue_terminate term = { .buffer_gpu_addr = q->ring_gpu_va };
+    ioctl(fd, KBASE_IOCTL_CS_QUEUE_TERMINATE, &term);
+    if (q->ring) munmap(q->ring, q->ring_size);
+    if (q->user_io) munmap(q->user_io, 3 * 4096);
+    q->ring = NULL;
+    q->user_io = NULL;
+    q->created = false;
     return 0;
 }
 

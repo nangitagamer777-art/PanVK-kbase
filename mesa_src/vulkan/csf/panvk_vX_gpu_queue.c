@@ -438,9 +438,12 @@ init_subqueue_tracing(struct panvk_gpu_queue *queue,
 static void
 finish_subqueue(struct panvk_gpu_queue *queue, enum panvk_subqueue_id subqueue)
 {
-   panvk_pool_free_mem(&queue->subqueues[subqueue].context);
-   panvk_pool_free_mem(&queue->subqueues[subqueue].req_resource.buf);
-   panvk_pool_free_mem(&queue->subqueues[subqueue].regs_save);
+   if (panvk_priv_mem_check_alloc(queue->subqueues[subqueue].context))
+      panvk_pool_free_mem(&queue->subqueues[subqueue].context);
+   if (panvk_priv_mem_check_alloc(queue->subqueues[subqueue].req_resource.buf))
+      panvk_pool_free_mem(&queue->subqueues[subqueue].req_resource.buf);
+   if (panvk_priv_mem_check_alloc(queue->subqueues[subqueue].regs_save))
+      panvk_pool_free_mem(&queue->subqueues[subqueue].regs_save);
    finish_subqueue_tracing(queue, subqueue);
 }
 
@@ -653,6 +656,7 @@ init_subqueue(struct panvk_gpu_queue *queue, enum panvk_subqueue_id subqueue)
             panvk_priv_mem_dev_addr(queue->tiler_heap.oom_fbd);
       }
    }
+   panvk_priv_mem_flush(subq->context, 0, sizeof(struct panvk_cs_subqueue_context));
 
    /* We use the geometry buffer for our temporary CS buffer. */
    root_cs = (struct cs_buffer){
@@ -1693,10 +1697,17 @@ panvk_per_arch(destroy_gpu_queue)(struct vk_queue *vk_queue)
    struct panvk_gpu_queue *queue = container_of(vk_queue, struct panvk_gpu_queue, vk);
    struct panvk_device *dev = to_panvk_device(queue->vk.base.device);
 
-   cleanup_queue(queue);
-   destroy_group(queue);
-   cleanup_tiler(queue);
-   drmSyncobjDestroy(dev->drm_fd, queue->syncobj_handle);
+   if (dev->kmod.dev) {
+      /* kbase backend: cleanup + TERMINATE + munmap */
+      cleanup_queue(queue);
+      kbase_cs_queue_destroy(dev->kmod.dev);
+   } else {
+      /* Panthor original path */
+      cleanup_queue(queue);
+      destroy_group(queue);
+      cleanup_tiler(queue);
+      drmSyncobjDestroy(dev->drm_fd, queue->syncobj_handle);
+   }
    vk_queue_finish(&queue->vk);
    vk_free(&dev->vk.alloc, queue);
 }
