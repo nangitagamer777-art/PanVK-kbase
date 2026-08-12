@@ -466,3 +466,40 @@ Show exported symbols:
 - syncobjs: poll output_page CS_ACTIVE until idle
 - libkbase_scudo_fix.so: NOT required
 - libkbase_drm.so: REQUIRED
+
+## Environment Paths
+
+Proot Debian (Mesa build):
+    ~/mesa-26.2.0-rc2/          # Mesa source tree
+    ~/mesa-26.2.0-rc2/build/    # Ninja build
+    ~/android-ndk/              # NDK r27
+
+Termux (wrappers and tests):
+    ~/PanVK-kbase/              # patched Mesa repo
+    ~/Panvk_Kmod/               # standalone kbase shim
+
+Android (runtime):
+    /sdcard/                    # file transfer
+    /data/local/tmp/            # test binaries and .so
+
+## Debug Tips
+
+Get crash backtrace:
+    logcat -b crash -d
+
+Trace kbase ioctls:
+    LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so \
+      strace -e trace=ioctl ./vk_final_test 2>&1 | grep -E "0x80|ioctl"
+
+Show exported symbols:
+    llvm-nm -n build/src/panfrost/vulkan/libvulkan_panfrost.so | grep kbase
+
+## Known Working State
+
+- CSIF real: regs=17 scoreboards=1 features=0x10
+- user_io: 3 pages (BASEP_QUEUE_NR_MMAP_USER_PAGES)
+- ring: GPU VA as mmap offset
+- sparse_dummy: 2MB BO with PAN_KMOD_BO_FLAG_NO_MMAP
+- syncobjs: poll output_page CS_ACTIVE until idle
+- libkbase_scudo_fix.so: NOT required
+- libkbase_drm.so: REQUIRED
