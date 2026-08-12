@@ -1,0 +1,251 @@
+/sdcard/libvulkan_panfrost_kbase.so /data/local/tmp/libvulkan_panfrost.so                  <
+duchamp:/data/local/tmp $ cd /data/local/tmp
+LD_PRELOAD=libkbase_drm.so ./vk_destroy_test 2>&1 | grep -E "u_printf|step 9|Segmentation" < [kbase] about to call u_printf_init, printf.bo=0xb400007391b3d5c0 addr.host=0x7471d6f000
+[kbase] u_printf_init DONE, ctx=0xb4000073c1b45278                                           [kbase] destroy: step 9 printf, ctx=0xb4000073c1b45278
+[kbase] destroy: step 9b printf destroyed                                                    /sdcard/libvulkan_panfrost_kbase.so /data/local/tmp/libvulkan_panfrost.so                  < duchamp:/data/local/tmp $ cd /data/local/tmp                                                 LD_PRELOAD=libkbase_scudo_fix.so:libkbase_drm.so ./vk_final_test                           < [kbase] trying fallback to /dev/mali0...\n[kbase] drmGetVersion failed on /dev/mali0, trying kbase backend anyway                                                                         [kbase] CSIF real: regs=17 scoreboards=1 features=0x10                                       [kbase] device ready, fd=4 group=0 ctx=3380 gpu_id=0xa8070000 shader=0x3f                    [kbase] after get_drm_device_ids: result=0                                                   [kbase] passed heaps & sync_types checks                                                     [kbase] vk_device_init returned 0
+[kbase] CSIF real: regs=17 scoreboards=1 features=0x10
+[kbase] device ready, fd=7 group=0 ctx=3381 gpu_id=0xa8070000 shader=0x3f
+[kbase] device->kmod.dev check passed
+[kbase] bo_init: before refcnt set, handle=266240 flags=0x4
+[kbase] bo_init: after refcnt set
+[kbase] kbase_vm_create: heap init ok, sparse_dummy=0xb4000072bac45010
+[kbase] pan_kmod_vm_create: 0xb40000723ac43c10
+[kbase] after vm_create, continuing...                                                       [kbase_dbg] using csif: ptr=0x7072a1c078 csg=8 cs=8 regs=17 scoreboard=1 unpreserved=4       [kbase] after mempools init                                                                  [kbase] about to create sample_positions (post JM block)
+[kbase_dbg] priv_bo_create: size=1536 flags=0x0 NO_MMAP=NO
+[kbase_dbg] priv_bo_create: flags 0x0 -> 0x0 (NO_MMAP forced off)                            [kbase] bo_init: before refcnt set, handle=270336 flags=0x0                                  [kbase] bo_init: after refcnt set                                                            [kbase_dbg] priv_bo_create: alloc bo=0xb4000072bac44d90 size=1536 flags=0x0                  [kbase_dbg] priv_bo: mmap returned 0x730c434000                                              [kbase_dbg] priv_bo: memset host=0x730c434000 size=1536                                      [kbase_dbg] priv_bo: memset OK                                                               [kbase_dbg] priv_bo: CPU RW test wrote=0x12345678 read=0x12345678
+[kbase_dbg] priv_bo: CPU RW test OK
+[kbase] priv_bo: about to call panvk_as_alloc, priv_heap=0xb4000071dac43148
+[kbase] priv_bo: before vm_bind
+[kbase] vm_bind: AUTO_VA -> 0x4fffff000
+[kbase] priv_bo: after vm_bind, ret=0
+[kbase_dbg] priv_bo: FINAL bo=0xb4000072bac44d90 handle=270336 size=1536 host=0x730c434000 dev=0x4fffff000 flags=0x0                                                                      [kbase] priv_bo: address_binding_report done
+[kbase] about to create printf buffer
+[kbase_dbg] priv_bo_create: size=16384 flags=0x0 NO_MMAP=NO
+[kbase_dbg] priv_bo_create: flags 0x0 -> 0x0 (NO_MMAP forced off)
+[kbase] bo_init: before refcnt set, handle=270336 flags=0x0
+[kbase] bo_init: after refcnt set
+[kbase_dbg] priv_bo_create: alloc bo=0xb4000072bac44f70 size=16384 flags=0x0
+[kbase_dbg] priv_bo: mmap returned 0x730b10a000
+[kbase_dbg] priv_bo: memset host=0x730b10a000 size=16384
+[kbase_dbg] priv_bo: memset OK
+[kbase_dbg] priv_bo: CPU RW test wrote=0x12345678 read=0x12345678
+[kbase_dbg] priv_bo: CPU RW test OK
+[kbase] priv_bo: about to call panvk_as_alloc, priv_heap=0xb4000071dac43148
+[kbase] priv_bo: before vm_bind
+[kbase] vm_bind: AUTO_VA -> 0x4ffffb000
+[kbase] priv_bo: after vm_bind, ret=0
+[kbase_dbg] priv_bo: FINAL bo=0xb4000072bac44f70 handle=270336 size=16384 host=0x730b10a000 dev=0x4ffffb000 flags=0x0
+[kbase] priv_bo: address_binding_report done
+[kbase] about to call u_printf_init, printf.bo=0xb4000072bac449d0 addr.host=0x730b10a000
+[kbase] u_printf_init DONE, ctx=0xb4000071dac44ae8
+[kbase] after drm_fd setup
+[kbase] after precomp_init, result=0
+[kbase] after pipeline_cache_create
+[kbase_dbg] priv_bo_create: size=8192 flags=0x0 NO_MMAP=NO
+[kbase_dbg] priv_bo_create: flags 0x0 -> 0x0 (NO_MMAP forced off)
+[kbase] bo_init: before refcnt set, handle=270336 flags=0x0
+[kbase] bo_init: after refcnt set
+[kbase_dbg] priv_bo_create: alloc bo=0xb4000072bac45970 size=8192 flags=0x0
+[kbase_dbg] priv_bo: mmap returned 0x730b227000
+[kbase_dbg] priv_bo: memset host=0x730b227000 size=8192
+[kbase_dbg] priv_bo: memset OK
+[kbase_dbg] priv_bo: CPU RW test wrote=0x12345678 read=0x12345678
+[kbase_dbg] priv_bo: CPU RW test OK
+[kbase] priv_bo: about to call panvk_as_alloc, priv_heap=0xb4000071dac43148
+[kbase] priv_bo: before vm_bind
+[kbase] vm_bind: AUTO_VA -> 0x4ffff9000
+[kbase] priv_bo: after vm_bind, ret=0
+[kbase_dbg] priv_bo: FINAL bo=0xb4000072bac45970 handle=270336 size=8192 host=0x730b227000 dev=0x4ffff9000 flags=0x0
+[kbase] priv_bo: address_binding_report done
+[drawctx] loop: has_zs=0 rt=1
+[drawctx] loop: has_zs=0 rt=1
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=0 cap=64[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227000 capacity=64\n[nop] BEFORE cpu[0] addr=0x730b227000\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227008\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227010\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227018\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=0\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=0 rt=1 fn_length=32 dump=4096 vertex_dump_before=0\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=0 rt=2
+[drawctx] loop: has_zs=0 rt=2
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=32 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227020 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227020\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227028\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227030\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227038\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=0 rt=2 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=0 rt=3
+[drawctx] loop: has_zs=0 rt=3
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=64 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227040 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227040\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227048\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227050\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227058\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=0 rt=3 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=0 rt=4
+[drawctx] loop: has_zs=0 rt=4
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=96 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227060 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227060\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227068\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227070\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227078\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=0 rt=4 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=0 rt=5
+[drawctx] loop: has_zs=0 rt=5
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=128 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227080 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227080\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227088\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227090\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227098\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=0 rt=5 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=0 rt=6
+[drawctx] loop: has_zs=0 rt=6
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=160 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b2270a0 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b2270a0\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b2270a8\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b2270b0\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b2270b8\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=0 rt=6 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=0 rt=7
+[drawctx] loop: has_zs=0 rt=7
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=192 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b2270c0 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b2270c0\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b2270c8\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b2270d0\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b2270d8\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=0 rt=7 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=0 rt=8
+[drawctx] loop: has_zs=0 rt=8
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=224 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b2270e0 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b2270e0\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b2270e8\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b2270f0\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b2270f8\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=0 rt=8 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=1 rt=1
+[drawctx] loop: has_zs=1 rt=1
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=256 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227100 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227100\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227108\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227110\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227118\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=1 rt=1 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=1 rt=2
+[drawctx] loop: has_zs=1 rt=2
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=288 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227120 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227120\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227128\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227130\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227138\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=1 rt=2 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=1 rt=3
+[drawctx] loop: has_zs=1 rt=3
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=320 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227140 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227140\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227148\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227150\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227158\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=1 rt=3 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=1 rt=4
+[drawctx] loop: has_zs=1 rt=4
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=352 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227160 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227160\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227168\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227170\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227178\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=1 rt=4 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=1 rt=5
+[drawctx] loop: has_zs=1 rt=5
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=384 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b227180 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b227180\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b227188\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b227190\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b227198\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=1 rt=5 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=1 rt=6
+[drawctx] loop: has_zs=1 rt=6
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=416 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b2271a0 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b2271a0\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b2271a8\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b2271b0\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b2271b8\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=1 rt=6 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=1 rt=7
+[drawctx] loop: has_zs=1 rt=7
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=448 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b2271c0 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b2271c0\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b2271c8\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b2271d0\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b2271d8\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=1 rt=7 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[drawctx] loop: has_zs=1 rt=8
+[drawctx] loop: has_zs=1 rt=8
+[drawctx] fn_mem: fns_bo=0xb4000072bac459c0 host=0x730b227000 offset=480 cap=4
+[trace] BEFORE generate_fn\n[nop] ENTER cpu=0x730b2271e0 capacity=4\n[nop] BEFORE cpu[0] addr=0x730b2271e0\n[nop] AFTER  cpu[0]\n[nop] BEFORE cpu[1] addr=0x730b2271e8\n[nop] AFTER  cpu[1]\n[nop] BEFORE cpu[2] addr=0x730b2271f0\n[nop] AFTER  cpu[2]\n[nop] BEFORE cpu[3] addr=0x730b2271f8\n[nop] AFTER  cpu[3]\n[nop] LEAVE fn_length=32\n[trace] AFTER generate_fn fn_length=32\n[trace] dump_region_size addr=0x7fecbc110c\n[trace] dump_region_size value=4096\n[trace] BEFORE dev dump read\n[trace] dev=0xb4000071dac417a0 dump_region_size=0xb4000071cac41210\n[trace] AFTER dev dump read value=4096\n[trace] BEFORE regs_test fprintf\n[regs_test] provoking: zs=1 rt=8 fn_length=32 dump=4096 vertex_dump_before=4096\n[trace] AFTER regs_test fprintf\n[trace] BEFORE assert\n[trace] AFTER assert\n[trace] BEFORE stride write\n[trace] AFTER stride write\n[trace] BEFORE dump MAX2\n[trace] AFTER dump MAX2 value=4096\n[trace] BEFORE dump write\n[trace] AFTER dump write\n[kbase] after device_draw_context_init, result=0[kbase] meta_init: real init done
+[kbase] after meta_init, result=0
+[kbase] about to create queues, count=1
+[kbase] queue_create[0] = 0x7fecbc2690, queueCount=1
+[kbase] before check_global_priority, phys_dev=0xb4000071bac3b220, phys_dev->kmod.dev=0xb4000072dac38710
+[kbase] entered check_global_priority
+[kbase] check_global_priority: phys_dev=0xb4000071bac3b220, phys_dev->kmod.dev=0xb4000072dac38710
+[kbase] after pan_arch, arch=10
+[kbase] forced priority=MEDIUM (256)
+[kbase] before global_priority_to_group_allow_priority_flag, priority=256
+[kbase] after global_priority_to_group_allow_priority_flag, requested_prio=2
+[kbase] entered panvk_queue_create, family=0 idx=0
+[kbase] entered create_gpu_queue
+[kbase] before drmSyncobjCreate, drm_fd=7
+[kbase] before init_tiler
+[kbase_dbg] priv_bo_create: size=69632 flags=0x0 NO_MMAP=NO
+[kbase_dbg] priv_bo_create: flags 0x0 -> 0x0 (NO_MMAP forced off)
+[kbase] bo_init: before refcnt set, handle=270336 flags=0x0
+[kbase] bo_init: after refcnt set
+[kbase_dbg] priv_bo_create: alloc bo=0xb4000072bac45ba0 size=69632 flags=0x0
+[kbase_dbg] priv_bo: mmap returned 0x730b0f9000
+[kbase_dbg] priv_bo: memset host=0x730b0f9000 size=69632
+[kbase_dbg] priv_bo: memset OK
+[kbase_dbg] priv_bo: CPU RW test wrote=0x12345678 read=0x12345678
+[kbase_dbg] priv_bo: CPU RW test OK
+[kbase] priv_bo: about to call panvk_as_alloc, priv_heap=0xb4000071dac43148
+[kbase] priv_bo: before vm_bind
+[kbase] vm_bind: AUTO_VA -> 0x4fffe8000
+[kbase] priv_bo: after vm_bind, ret=0
+[kbase_dbg] priv_bo: FINAL bo=0xb4000072bac45ba0 handle=270336 size=69632 host=0x730b0f9000 dev=0x4fffe8000 flags=0x0
+[kbase] priv_bo: address_binding_report done
+[kbase_dbg] priv_bo_create: size=16384 flags=0x0 NO_MMAP=NO
+[kbase_dbg] priv_bo_create: flags 0x0 -> 0x0 (NO_MMAP forced off)
+[kbase] bo_init: before refcnt set, handle=270336 flags=0x0
+[kbase] bo_init: after refcnt set
+[kbase_dbg] priv_bo_create: alloc bo=0xb4000072bac45f10 size=16384 flags=0x0
+[kbase_dbg] priv_bo: mmap returned 0x730b0f5000
+[kbase_dbg] priv_bo: memset host=0x730b0f5000 size=16384
+[kbase_dbg] priv_bo: memset OK
+[kbase_dbg] priv_bo: CPU RW test wrote=0x12345678 read=0x12345678
+[kbase_dbg] priv_bo: CPU RW test OK
+[kbase] priv_bo: about to call panvk_as_alloc, priv_heap=0xb4000071dac43148
+[kbase] priv_bo: before vm_bind
+[kbase] vm_bind: AUTO_VA -> 0x4fffe4000
+[kbase] priv_bo: after vm_bind, ret=0
+[kbase_dbg] priv_bo: FINAL bo=0xb4000072bac45f10 handle=270336 size=16384 host=0x730b0f5000 dev=0x4fffe4000 flags=0x0
+[kbase] priv_bo: address_binding_report done
+[kbase_write] START mem=0x7fecbc1110 host=0x730b0f9000 offset=0x0\n[kbase_write] START RETURN ptr=0x730b0f9000\n[kbase_write] END ENTER mem=0x7fecbc10d0 offset=0x0 size=32\n[kbase_write] END bo=0xb4000072bac45150\n[kbase_write] END kmod_bo=0xb4000072bac45ba0 flags=0x0\n[kbase_write] END no flush required\n[kbase_write] END RETURN\n[kbase] after init_tiler, result=0
+[kbase] before create_group
+[kbase] after create_group, result=0
+[kbase] before init_queue
+[kbase_dbg] BEFORE init_render_desc_ringbuf CALL\n[kbase] bo_init: before refcnt set, handle=270336 flags=0x4
+[kbase] bo_init: after refcnt set
+[kbase] ringbuf->size=524288, requested=1048576, alignment=1048576
+[kbase] vm_bind: AUTO_VA -> 0x4fff64000
+[kbase_dbg] before pool_alloc_mem syncobj
+[kbase_dbg] after pool_alloc_mem, checking alloc
+[kbase_dbg] before priv_mem_write syncobj
+
+[kbase_syncobj] ================================
+[kbase_syncobj] mem.bo=0xb4000072bac456f0
+[kbase_syncobj] priv_bo=0xb4000072bac456f0
+[kbase_syncobj] kmod_bo=0xb4000072bac45f10
+[kbase_syncobj] host=0x730b0f5380
+[kbase_syncobj] dev=0x4fffe4380
+[kbase_syncobj] offset=0x380
+[kbase_syncobj] =================================
+[kbase_syncobj] handle=270336 size=16384 bo_flags=0x0
+[kbase_syncobj] checking /proc/self/maps for 0x730b0f5380
+[kbase_syncobj] MAP HIT: 730b0f5000-730b0f9000 rw-s 730b0f5000 00:11 1632                         /dev/mali0
+[kbase_syncobj] ABOUT TO DIRECT-READ 0x730b0f5380
+[kbase_syncobj] DIRECT-READ OK value=0x0
+[kbase_syncobj] ABOUT TO DIRECT-WRITE 0x730b0f5380
+[kbase_syncobj] DIRECT-WRITE OK
+[kbase_syncobj] READBACK=0x534f424a
+[kbase_syncobj] ORIGINAL VALUE RESTORED
+[kbase_dbg] syncobj host_addr=0x730b0f5380 dev_addr=0x4fffe4380
+[kbase_dbg] BEFORE ringbuf syncobj write
+[kbase_write] START mem=0x7fecbc0d70 host=0x730b0f5380 offset=0x0\n[kbase_write] START RETURN ptr=0x730b0f5380\n[kbase_write] END ENTER mem=0x7fecbc0d70 offset=0x0 size=8\n[kbase_write] END bo=0xb4000072bac456f0\n[kbase_write] END kmod_bo=0xb4000072bac45f10 flags=0x0\n[kbase_write] END no flush required\n[kbase_write] END RETURN\n[kbase_dbg] AFTER ringbuf syncobj write
+[kbase_dbg] BEFORE init_render_desc_ringbuf RETURN\n[kbase_dbg] ABOUT TO RETURN ZERO, VK_SUCCESS=0\n[kbase_dbg] AFTER init_render_desc_ringbuf CALL result=0\n[kbase_dbg] init_render_desc_ringbuf SUCCESS\n[kbase_dbg] BEFORE init_subqueue i=0 queue=0xb4000072eac388b0
+[kbase_dbg] init_subqueue: ENTER subqueue=0\n[kbase_dbg] init_subqueue: BEFORE tracing\n[kbase_dbg] init_subqueue: AFTER tracing result=0\n[kbase_dbg] init_subqueue: BEFORE alloc_info\n[kbase_dbg] init_subqueue: AFTER alloc_info\n[kbase_dbg] BEFORE dump_region_size: dev=0xb4000071dac417a0 subqueue=0\n[kbase_dbg] sizeof(*dev)=13176\n[kbase_dbg] dump_region_size FIELD ADDRESS=0xb4000071dac433b0\n[kbase_dbg] AFTER dump_region_size FIELD ADDRESS\n[kbase_dbg] init_subqueue: BEFORE dump_region_size access\n[kbase_dbg] init_subqueue: dev=0xb4000071dac417a0 subq=0xb4000072eac38af0 subqueue=0\n[kbase_dbg] init_subqueue: dump_region_size ptr=0xb4000071cac41210\n[kbase_dbg] init_subqueue: dump_region_size[0]=4096\n[kbase_dbg] init_subqueue: ENTER regs_save allocation\n[kbase_dbg] init_subqueue: BEFORE regs_save alloc\n[regs_test] regs_save: subqueue=0 size=4096 gpu=0x4fffe4388\n[kbase_dbg] init_subqueue: AFTER regs_save alloc\n[kbase_dbg] init_subqueue: mempool=0xb4000071dac43238\n[kbase_dbg] init_subqueue: BEFORE req_resource alloc\n[kbase_dbg] init_subqueue: AFTER req_resource alloc\n[kbase_dbg] using csif: ptr=0x7072a1c078 csg=8 cs=8 regs=17 scoreboard=1 unpreserved=4
+[KBASE] YES CS_BUILDER_INIT
+[KBASE] YES CS_END
+[KBASE] YES CS_VALID
+[KBASE] YES BUILDER_FINI
+[KBASE] YES REQ_RESOURCE
+[KBASE] YES CONTEXT_ALLOC
+[KBASE] YES CONTEXT_WRITE
+[kbase_write] START mem=0x7fecbc0d70 host=0x730b0f6400 offset=0x0\n[kbase_write] START RETURN ptr=0x730b0f6400\n[kbase_write] END ENTER mem=0x7fecbc0d70 offset=0x0 size=192\n[kbase_write] END bo=0xb4000072bac456f0\n[kbase_write] END kmod_bo=0xb4000072bac45f10 flags=0x0\n[kbase_write] END no flush required\n[kbase_write] END RETURN\n[KBASE] YES SCOREBOARD
+[KBASE] YES SYNCOBJ_WRITE
+[kbase_write] START mem=0x7fecbc0d70 host=0x730b0f52c0 offset=0x0\n[kbase_write] START RETURN ptr=0x730b0f52c0\n[kbase_write] END ENTER mem=0x7fecbc0d70 offset=0x0 size=16\n[kbase_write] END bo=0xb4000072bac456f0\n[kbase_write] END kmod_bo=0xb4000072bac45f10 flags=0x0\n[kbase_write] END no flush required\n[kbase_write] END RETURN\n[KBASE] YES HEAP_SETUP
+[KBASE_FLUSH] BEFORE\n[KBASE_FLUSH] host=0x730b0f9000\n[KBASE_FLUSH] dev=0x4fffe8000\n[KBASE_FLUSH] offset=4096\n[KBASE_FLUSH] cs_size=32\n[KBASE_FLUSH] range_end=4128\n[KBASE_FLUSH] BEFORE panvk_priv_mem_flush\n[KBASE_FLUSH] AFTER panvk_priv_mem_flush\n[KBASE] YES STREAM_FLUSH\n[KBASE_TRACE] AFTER STREAM_FLUSH: before kbase submit
+[KBASE_TRACE] kbase submit stream_addr=0x4fffe9000 size=32
+[KBASE] YES MAP_SYNCS
+[kbase] bo_init: before refcnt set, handle=274432 flags=0x10
+[kbase] bo_init: after refcnt set
+[kbase] BIND: ring_gpu_va=0x800000001000 mmap_handle=0x30000
+[kbase] CS queue created: ring=0x800000001000 user_io=0x43000
+[kbase] submit: size=32 insert=32
+[KBASE_TRACE] AFTER kbase submit ret=0
+[KBASE] YES SYNCOBJ_WAIT
+[KBASE_TRACE] BEFORE drmSyncobjWait\n[KBASE_TRACE] AFTER drmSyncobjWait ret=0\n[KBASE] YES SYNCOBJ_RESET
+[kbase_dbg] AFTER init_subqueue i=0 result=0\n[kbase_dbg] BEFORE init_subqueue i=1 queue=0xb4000072eac388b0
+[kbase_dbg] init_subqueue: ENTER subqueue=1\n[kbase_dbg] init_subqueue: BEFORE tracing\n[kbase_dbg] init_subqueue: AFTER tracing result=0\n[kbase_dbg] init_subqueue: BEFORE alloc_info\n[kbase_dbg] init_subqueue: AFTER alloc_info\n[kbase_dbg] BEFORE dump_region_size: dev=0xb4000071dac417a0 subqueue=1\n[kbase_dbg] sizeof(*dev)=13176\n[kbase_dbg] dump_region_size FIELD ADDRESS=0xb4000071dac433b0\n[kbase_dbg] AFTER dump_region_size FIELD ADDRESS\n[kbase_dbg] init_subqueue: BEFORE dump_region_size access\n[kbase_dbg] init_subqueue: dev=0xb4000071dac417a0 subq=0xb4000072eac38b58 subqueue=1\n[kbase_dbg] init_subqueue: dump_region_size ptr=0xb4000071cac41210\n[kbase_dbg] init_subqueue: dump_region_size[1]=0\n[kbase_dbg] init_subqueue: mempool=0xb4000071dac43238\n[kbase_dbg] init_subqueue: BEFORE req_resource alloc\n[kbase_dbg] init_subqueue: AFTER req_resource alloc\n[kbase_dbg] using csif: ptr=0x7072a1c078 csg=8 cs=8 regs=17 scoreboard=1 unpreserved=4
+[KBASE] YES CS_BUILDER_INIT
+[KBASE] YES CS_END
+[KBASE] YES CS_VALID
+[KBASE] YES BUILDER_FINI
+[KBASE] YES REQ_RESOURCE
+[KBASE] YES CONTEXT_ALLOC
+[KBASE] YES CONTEXT_WRITE
+[kbase_write] START mem=0x7fecbc0d70 host=0x730b0f6500 offset=0x0\n[kbase_write] START RETURN ptr=0x730b0f6500\n[kbase_write] END ENTER mem=0x7fecbc0d70 offset=0x0 size=192\n[kbase_write] END bo=0xb4000072bac456f0\n[kbase_write] END kmod_bo=0xb4000072bac45f10 flags=0x0\n[kbase_write] END no flush required\n[kbase_write] END RETURN\n[KBASE] YES SCOREBOARD
+[KBASE] YES SYNCOBJ_WRITE
+[kbase_write] START mem=0x7fecbc0d70 host=0x730b0f52c0 offset=0x10\n[kbase_write] START RETURN ptr=0x730b0f52d0\n[kbase_write] END ENTER mem=0x7fecbc0d70 offset=0x10 size=16\n[kbase_write] END bo=0xb4000072bac456f0\n[kbase_write] END kmod_bo=0xb4000072bac45f10 flags=0x0\n[kbase_write] END no flush required\n[kbase_write] END RETURN\n[KBASE] YES HEAP_SETUP
+[KBASE_FLUSH] BEFORE\n[KBASE_FLUSH] host=0x730b0f9000\n[KBASE_FLUSH] dev=0x4fffe8000\n[KBASE_FLUSH] offset=4096\n[KBASE_FLUSH] cs_size=32\n[KBASE_FLUSH] range_end=4128\n[KBASE_FLUSH] BEFORE panvk_priv_mem_flush\n[KBASE_FLUSH] AFTER panvk_priv_mem_flush\n[KBASE] YES STREAM_FLUSH\n[KBASE_TRACE] AFTER STREAM_FLUSH: before kbase submit
+[KBASE_TRACE] kbase submit stream_addr=0x4fffe9000 size=32
+[KBASE] YES MAP_SYNCS
+[kbase] submit: size=32 insert=64
+[KBASE_TRACE] AFTER kbase submit ret=0
+[KBASE] YES SYNCOBJ_WAIT
+[KBASE_TRACE] BEFORE drmSyncobjWait\n[KBASE_TRACE] AFTER drmSyncobjWait ret=0\n[KBASE] YES SYNCOBJ_RESET
+[kbase_dbg] AFTER init_subqueue i=1 result=0\n[kbase_dbg] BEFORE init_subqueue i=2 queue=0xb4000072eac388b0
+[kbase_dbg] init_subqueue: ENTER subqueue=2\n[kbase_dbg] init_subqueue: BEFORE tracing\n[kbase_dbg] init_subqueue: AFTER tracing result=0\n[kbase_dbg] init_subqueue: BEFORE alloc_info\n[kbase_dbg] init_subqueue: AFTER alloc_info\n[kbase_dbg] BEFORE dump_region_size: dev=0xb4000071dac417a0 subqueue=2\n[kbase_dbg] sizeof(*dev)=13176\n[kbase_dbg] dump_region_size FIELD ADDRESS=0xb4000071dac433b0\n[kbase_dbg] AFTER dump_region_size FIELD ADDRESS\n[kbase_dbg] init_subqueue: BEFORE dump_region_size access\n[kbase_dbg] init_subqueue: dev=0xb4000071dac417a0 subq=0xb4000072eac38bc0 subqueue=2\n[kbase_dbg] init_subqueue: dump_region_size ptr=0xb4000071cac41210\n[kbase_dbg] init_subqueue: dump_region_size[2]=0\n[kbase_dbg] init_subqueue: mempool=0xb4000071dac43238\n[kbase_dbg] init_subqueue: BEFORE req_resource alloc\n[kbase_dbg] init_subqueue: AFTER req_resource alloc\n[kbase_dbg] using csif: ptr=0x7072a1c078 csg=8 cs=8 regs=17 scoreboard=1 unpreserved=4
+[KBASE] YES CS_BUILDER_INIT
+[KBASE] YES CS_END
+[KBASE] YES CS_VALID
+[KBASE] YES BUILDER_FINI
+[KBASE] YES REQ_RESOURCE
+[KBASE] YES CONTEXT_ALLOC
+[KBASE] YES CONTEXT_WRITE
+[kbase_write] START mem=0x7fecbc0d70 host=0x730b0f6600 offset=0x0\n[kbase_write] START RETURN ptr=0x730b0f6600\n[kbase_write] END ENTER mem=0x7fecbc0d70 offset=0x0 size=192\n[kbase_write] END bo=0xb4000072bac456f0\n[kbase_write] END kmod_bo=0xb4000072bac45f10 flags=0x0\n[kbase_write] END no flush required\n[kbase_write] END RETURN\n[KBASE] YES SCOREBOARD
+[KBASE] YES SYNCOBJ_WRITE
+[kbase_write] START mem=0x7fecbc0d70 host=0x730b0f52c0 offset=0x20\n[kbase_write] START RETURN ptr=0x730b0f52e0\n[kbase_write] END ENTER mem=0x7fecbc0d70 offset=0x20 size=16\n[kbase_write] END bo=0xb4000072bac456f0\n[kbase_write] END kmod_bo=0xb4000072bac45f10 flags=0x0\n[kbase_write] END no flush required\n[kbase_write] END RETURN\n[KBASE_FLUSH] BEFORE\n[KBASE_FLUSH] host=0x730b0f9000\n[KBASE_FLUSH] dev=0x4fffe8000\n[KBASE_FLUSH] offset=4096\n[KBASE_FLUSH] cs_size=16\n[KBASE_FLUSH] range_end=4112\n[KBASE_FLUSH] BEFORE panvk_priv_mem_flush\n[KBASE_FLUSH] AFTER panvk_priv_mem_flush\n[KBASE] YES STREAM_FLUSH\n[KBASE_TRACE] AFTER STREAM_FLUSH: before kbase submit
+[KBASE_TRACE] kbase submit stream_addr=0x4fffe9000 size=16
+[KBASE] YES MAP_SYNCS
+[kbase] submit: size=16 insert=80
+[KBASE_TRACE] AFTER kbase submit ret=0
+[KBASE] YES SYNCOBJ_WAIT
+[KBASE_TRACE] BEFORE drmSyncobjWait\n[KBASE_TRACE] AFTER drmSyncobjWait ret=0\n[KBASE] YES SYNCOBJ_RESET
+[kbase_dbg] AFTER init_subqueue i=2 result=0\n[kbase] after init_queue, result=0
+
+=== TEST COMPLETED ===
+vkCreateDevice returned: 0
+STATUS: SUCCESS (Device Created)
+duchamp:/data/local/tmp $
