@@ -787,7 +787,16 @@ void pan_kmod_queue_bo_map_sync(struct pan_kmod_bo *bo, uint64_t bo_offset,
 void pan_kmod_flush_bo_map_syncs(struct pan_kmod_dev *dev);
 /* ── kbase CS queue ── */
 struct kbase_cs_queue;
+struct kbase_csif_info {
+    __u32 csg_slot_count;
+    __u32 cs_slot_count;
+    __u32 cs_reg_count;
+    __u32 scoreboard_slot_count;
+    __u32 unpreserved_cs_reg_count;
+    __u32 pad;
+};
 struct kbase_dev;
+struct kbase_csif_info *kbase_get_csif(void);
 int kbase_cs_queue_create(struct pan_kmod_dev *dev);
 int kbase_cs_queue_submit(struct pan_kmod_dev *dev, uint64_t stream_gpu_addr, void *stream_cpu_addr, uint32_t stream_size);
 int kbase_cs_queue_destroy(struct pan_kmod_dev *dev);

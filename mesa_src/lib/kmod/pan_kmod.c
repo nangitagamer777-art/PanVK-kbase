@@ -64,6 +64,12 @@ struct kbase_ioctl_cs_queue_kick {
 struct kbase_ioctl_cs_queue_terminate { __u64 buffer_gpu_addr; };
 #define KBASE_IOCTL_CS_QUEUE_TERMINATE _IOW(KBASE_IOCTL_TYPE, 41, struct kbase_ioctl_cs_queue_terminate)
 
+union kbase_ioctl_cs_get_glb_iface {
+    struct { __u32 max_group_num; __u32 max_total_stream_num; __u64 groups_ptr; __u64 streams_ptr; } in;
+    struct { __u32 glb_version; __u32 features; __u32 group_num; __u32 prfcnt_size; __u32 total_stream_num; __u32 instr_features; } out;
+};
+#define KBASE_IOCTL_CS_GET_GLB_IFACE _IOWR(KBASE_IOCTL_TYPE, 51, union kbase_ioctl_cs_get_glb_iface)
+
 union kbase_ioctl_cs_queue_bind {
     struct {
         __u64 buffer_gpu_addr;
@@ -91,12 +97,13 @@ struct kbase_cs_queue {
     bool created;
 };
 
-struct kbase_dev { struct pan_kmod_dev base; uint8_t group; uint32_t ctx; struct kbase_cs_queue cs_queue; };
+struct kbase_dev { struct pan_kmod_dev base; uint8_t group; uint32_t ctx; struct kbase_cs_queue cs_queue; struct kbase_csif_info csif; };
 
 /* Global para que libkbase_drm.so acceda a la cola CSF */
 static struct kbase_dev *g_kbase_dev = NULL;
 struct pan_kmod_dev *pan_kmod_get_global_dev(void) { return &g_kbase_dev->base; }
 void *pan_kmod_get_output_page(void) { return g_kbase_dev->cs_queue.output_page; }
+struct kbase_csif_info *kbase_get_csif(void) { return &g_kbase_dev->csif; }
 void *pan_kmod_get_input_page(void) { return g_kbase_dev->cs_queue.input_page; }
 
 struct kbase_gpu_info { uint64_t gpu_id; uint64_t shader_present; };
@@ -113,6 +120,24 @@ static struct kbase_gpu_info kbase_query_gpu_info(int fd) {
     }
     free(buf);
     return info;
+}
+
+/* Leer CSIF real del firmware CSF */
+static void kbase_query_csif(int fd, uint32_t *cs_reg_count, uint32_t *scoreboard_count) {
+    union kbase_ioctl_cs_get_glb_iface glb = {0};
+    glb.in.max_group_num = 0;
+    glb.in.max_total_stream_num = 0;
+    glb.in.groups_ptr = 0;
+    glb.in.streams_ptr = 0;
+    if (ioctl(fd, KBASE_IOCTL_CS_GET_GLB_IFACE, &glb) == 0) {
+        *scoreboard_count = ((glb.out.features >> 8) & 0xF) + 1;
+        *cs_reg_count = (glb.out.features & 0xFF) + 1;
+        fprintf(stderr, "[kbase] CSIF real: regs=%u scoreboards=%u features=0x%x\n",
+                *cs_reg_count, *scoreboard_count, glb.out.features);
+    } else {
+        *cs_reg_count = 96;
+        *scoreboard_count = 8;
+    }
 }
 
 /* Query hardware properties - return real kbase values */
@@ -152,6 +177,14 @@ kbase_dev_create(int fd, uint32_t flags, const struct pan_kmod_driver *drv, cons
     if (ioctl(fd, KBASE_IOCTL_CS_QUEUE_GROUP_CREATE_1_6, &grp) < 0) { pan_kmod_free(alloc, kd); return NULL; }
     kd->group = grp.out.handle;
     pan_kmod_dev_init(&kd->base, fd, flags, drv, &panfrost_kmod_ops, alloc);
+    uint32_t cs_regs = 96, scoreboards = 8;
+    kbase_query_csif(fd, &cs_regs, &scoreboards);
+    kd->csif.csg_slot_count = 8;
+    kd->csif.cs_slot_count = 8;
+    kd->csif.cs_reg_count = cs_regs;
+    kd->csif.scoreboard_slot_count = scoreboards;
+    kd->csif.unpreserved_cs_reg_count = 4;
+    kd->csif.pad = 0;
     struct kbase_gpu_info info = kbase_query_gpu_info(fd);
     kd->base.props.gpu_id = info.gpu_id ? info.gpu_id : 0xA8070000;
     kd->base.props.shader_present = info.shader_present ? info.shader_present : 0x3F;

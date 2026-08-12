@@ -1305,23 +1305,33 @@ const struct drm_panthor_csif_info *
 panthor_kmod_get_csif_props(const struct pan_kmod_dev *dev)
 {
    if (dev->ops != &panthor_kmod_ops) {
-      static const struct drm_panthor_csif_info fake_csif = {
-         .csg_slot_count = 8,
-         .cs_slot_count = 8,
-         .cs_reg_count = 96,
-         .scoreboard_slot_count = 8,
-         .unpreserved_cs_reg_count = 8,
-         .pad = 0,
-      };
+      /* kbase: usar CSIF real del firmware */
+      extern struct kbase_csif_info *kbase_get_csif(void);
+      struct kbase_csif_info *real_csif = kbase_get_csif();
+      static struct drm_panthor_csif_info csif;
+      if (real_csif) {
+         csif.csg_slot_count = real_csif->csg_slot_count;
+         csif.cs_slot_count = real_csif->cs_slot_count;
+         csif.cs_reg_count = real_csif->cs_reg_count;
+         csif.scoreboard_slot_count = real_csif->scoreboard_slot_count;
+         csif.unpreserved_cs_reg_count = real_csif->unpreserved_cs_reg_count;
+         csif.pad = 0;
+      } else {
+         csif.csg_slot_count = 8;
+         csif.cs_slot_count = 8;
+         csif.cs_reg_count = 96;
+         csif.scoreboard_slot_count = 8;
+         csif.unpreserved_cs_reg_count = 8;
+      }
       fprintf(stderr,
-              "[kbase_dbg] using fake_csif: ptr=%p csg=%u cs=%u regs=%u scoreboard=%u unpreserved=%u\n",
-              &fake_csif,
-              fake_csif.csg_slot_count,
-              fake_csif.cs_slot_count,
-              fake_csif.cs_reg_count,
-              fake_csif.scoreboard_slot_count,
-              fake_csif.unpreserved_cs_reg_count);
-      return &fake_csif;
+              "[kbase_dbg] using csif: ptr=%p csg=%u cs=%u regs=%u scoreboard=%u unpreserved=%u\n",
+              &csif,
+              csif.csg_slot_count,
+              csif.cs_slot_count,
+              csif.cs_reg_count,
+              csif.scoreboard_slot_count,
+              csif.unpreserved_cs_reg_count);
+      return &csif;
    }
    struct panthor_kmod_dev *panthor_dev =
       container_of(dev, struct panthor_kmod_dev, base);
