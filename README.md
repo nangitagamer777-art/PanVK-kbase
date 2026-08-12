@@ -117,7 +117,7 @@ Expected:
 | Panthor queue binding | `CS_QUEUE_BIND` |
 | Panthor user_io | kbase `mmap_handle` |
 | Panthor GPU device | `/dev/mali0` |
-| DRM syncobj interface | compatibility symbols |
+| DRM syncobj interface | compatibility Layer |
 
 ## DRM compatibility layer
 
@@ -147,6 +147,17 @@ The current compatibility layer provides symbols including:
 - `drmPrimeFDToHandle`
 - `drmPrimeHandleToFD`
 
+The syncobj operations required by the current execution path are
+implemented using real kbase-backed synchronization.
+
+The remaining DRM interfaces that have no direct equivalent in kbase
+are kept as compatibility stubs. These include sync-file
+import/export, syncobj transfer, DRM capability queries, PRIME/DMA-BUF
+operations, and GEM buffer-handle operations.
+
+These stubs are intentional and are not part of the actual GPU
+execution path.
+
 ## Testing without libkbase_drm.so
 
 Running without the DRM compatibility layer currently reaches kbase
@@ -162,15 +173,43 @@ but then crashes with:
     Segmentation fault
 
 Therefore `libkbase_drm.so` is currently required by the working runtime
-configuration even though it is not responsible for actual GPU execution.
+configuration even
 
-## Scudo fix
+## Kbase Backend Status
 
-`libkbase_scudo_fix.so` contains an `mprotect()` compatibility workaround
-for `EPERM`.
+| Component | Status | Verified Value / Details |
+|---|---|---|
+| CSIF | REAL | `regs=17`, `scoreboard=1`, `features=0x10` |
+| Sparse dummy | REAL | `0xb4000072bac45010` (2 MB BO) |
+| BO allocation | REAL | `mmap` + `memset` + CPU RW test OK |
+| VM_BIND | REAL | `AUTO_VA -> 0x4fffff000` |
+| Syncobj | REAL | `host=0x730b0f5380`, `dev=0x4fffe4380` + RW test |
+| `u_printf_init` | REAL | DONE, `ctx=0xb4000071dac44ae8` |
+| `meta_init` | REAL | Real initialization completed |
+| CS builder | REAL | `INIT → END → VALID → FINI → REQ_RESOURCE → CONTEXT_ALLOC → CONTEXT_WRITE` |
+| Submit | REAL | 3 real submits, `ret=0`, insert `32 → 64 → 80` |
+| `drmSyncobjWait` | REAL | `BEFORE → AFTER`, `ret=0` (polls `output_page`) |
+| `drmSyncobjReset` | REAL | Resets output/input state |
+| `vkCreateDevice` | SUCCESS | `VK_SUCCESS` |
+| `vkDestroyDevice` | OK | Completes without crash |
+| CSIF naming | CLEAN | Uses `csif` instead of the old `fake_csif` label |
 
-The current `vkCreateDevice` test succeeds without it, so it is not part
-of the required runtime path at the current stage.
+## DRM / Syncobj Compatibility Layer
+
+| Function | Status | Implementation |
+|---|---|---|
+| `drmSyncobjCreate` | REAL | Real handle map |
+| `drmSyncobjWait` | REAL | Polls `output_page[CS_ACTIVE]` |
+| `drmSyncobjReset` | REAL | Resets output/input state |
+| `drmSyncobjDestroy` | REAL | Removes handle from the map |
+| `drmSyncobjTimelineWait` | REAL | Uses the real wait implementation |
+| `drmGetDevices2` | WRAPPER | Calls the real libdrm implementation |
+| `drmIoctl` | WRAPPER | Calls the real libdrm implementation |
+| `drmGetCap` | ! STUB | Works as a compatibility stub; no equivalent concept is needed/provided by kbase |
+| `drmPrime*` | ! STUB | Works as compatibility stubs; kbase has no DMA-BUF equivalent in this backend |
+| `drmCloseBufferHandle` | ! STUB | Works as a compatibility stub; kbase has no GEM handle equivalent |
+
+> **Note:** The entries are intentionally kept as stubs. They are not current blockers or broken implementations; the corresponding DRM concepts (`DMA-BUF`, GEM handles, DRM capabilities, etc.) have no direct equivalent in the kbase backend and are not required by the current PanVK-kbase execution path.
 
 ## Credits
 
