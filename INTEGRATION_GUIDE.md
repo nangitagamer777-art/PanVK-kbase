@@ -395,3 +395,36 @@ Panvk_Kmod — standalone kbase shim and GPU execution tests.
 ## License
 
 MIT
+
+## Full Mesa Setup (Tested)
+
+How to reproduce the build environment:
+
+    cd ~/mesa-26.2.0-rc2
+    meson setup build --wipe \
+      --cross-file=android-aarch64-35 \
+      android-stub=true \
+      -Dplatforms=panfrost \
+      -Dgallium-drivers=panfrost \
+      -Dllvm=false \
+      -Dmesa-clc=system \
+      -Dprecompiled-compiler=system \
+      -Degl=true \
+      -Dzstd=false
+
+    ninja -C build src/panfrost/vulkan/libvulkan_panfrost.so
+    cp build/src/panfrost/vulkan/libvulkan_panfrost.so /sdcard/libvulkan_panfrost_kbase.so
+
+Wrappers:
+
+    cd ~/Panvk_Kmod
+    clang -shared -fPIC -o build/libkbase_drm.so src/libkbase_drm.c -ldl
+    cp build/libkbase_drm.so /sdcard/libkbase_drm.so
+
+Runtime:
+
+    cp /sdcard/libvulkan_panfrost_kbase.so /data/local/tmp/libvulkan_panfrost.so
+    cp /sdcard/libkbase_drm.so /data/local/tmp/libkbase_drm.so
+    cd /data/local/tmp
+    LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so ./vk_final_test
+    LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so ./vk_destroy_test
