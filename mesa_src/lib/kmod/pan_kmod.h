@@ -791,6 +791,9 @@ struct kbase_dev;
 int kbase_cs_queue_create(struct pan_kmod_dev *dev);
 int kbase_cs_queue_submit(struct pan_kmod_dev *dev, uint64_t stream_gpu_addr, void *stream_cpu_addr, uint32_t stream_size);
 int kbase_cs_queue_destroy(struct pan_kmod_dev *dev);
+struct pan_kmod_dev *pan_kmod_get_global_dev(void);
+void *pan_kmod_get_output_page(void);
+void *pan_kmod_get_input_page(void);
 
 
 static inline void

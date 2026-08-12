@@ -93,6 +93,12 @@ struct kbase_cs_queue {
 
 struct kbase_dev { struct pan_kmod_dev base; uint8_t group; uint32_t ctx; struct kbase_cs_queue cs_queue; };
 
+/* Global para que libkbase_drm.so acceda a la cola CSF */
+static struct kbase_dev *g_kbase_dev = NULL;
+struct pan_kmod_dev *pan_kmod_get_global_dev(void) { return &g_kbase_dev->base; }
+void *pan_kmod_get_output_page(void) { return g_kbase_dev->cs_queue.output_page; }
+void *pan_kmod_get_input_page(void) { return g_kbase_dev->cs_queue.input_page; }
+
 struct kbase_gpu_info { uint64_t gpu_id; uint64_t shader_present; };
 static struct kbase_gpu_info kbase_query_gpu_info(int fd) {
     struct kbase_gpu_info info = { 0xA8070000, 0x3F };
@@ -154,6 +160,7 @@ kbase_dev_create(int fd, uint32_t flags, const struct pan_kmod_driver *drv, cons
     fprintf(stderr, "[kbase] device ready, fd=%d group=%u ctx=%u gpu_id=0x%llx shader=0x%llx\n", fd, kd->group, kd->ctx, (unsigned long long)kd->base.props.gpu_id, (unsigned long long)kd->base.props.shader_present);
     /* Force kbase ops - Mesa may overwrite them */
     kd->base.ops = &kbase_kmod_ops;
+    g_kbase_dev = kd;
     return &kd->base;
 }
 static void kbase_dev_destroy(struct pan_kmod_dev *dev) { close(dev->fd); pan_kmod_dev_cleanup(dev); pan_kmod_free(dev->allocator, dev); }
