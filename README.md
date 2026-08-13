@@ -29,7 +29,7 @@ CSF queue lifecycle fully working: REGISTER -> BIND -> KICK with 3 subqueues.
 | `pan_model.c` | Mali-G615 model support and fallback |
 | `pan_model.h` | Hardware `gpu_id` handling |
 | `meson.build` | Build integration for the kbase backend |
-| `I want to clarify that all src table files are indispensable and necessary` |
+| `I want to clarify that all mesa src files are indispensable and necessary` |
 
 The DRM compatibility layer is maintained separately in `Panvk_Kmod`:
 
