@@ -142,13 +142,50 @@ static void kbase_query_csif(int fd, uint32_t *cs_reg_count, uint32_t *scoreboar
 
 /* Query hardware properties - return real kbase values */
 static int kbase_query_props(struct pan_kmod_dev *dev, void *props) {
-    /* Fill with values that PanVK expects for Valhall v10 */
-    struct { uint32_t gpu_id; uint32_t csg_slots; uint32_t max_vregs; uint32_t coherency_features; } *p = props;
-    p->gpu_id = dev->props.gpu_id;
-    p->csg_slots = 4;
-    p->max_vregs = 64;
-    p->coherency_features = 1;
-    fprintf(stderr, "[kbase] query_props: gpu_id=0x%x csg=%u\n", p->gpu_id, p->csg_slots);
+    struct pan_kmod_dev_props *p = props;
+    struct { __u64 buffer; __u32 size; __u32 flags; } gp = { .size = 65536, .flags = 0 };
+    void *buf = calloc(1, gp.size);
+    if (!buf) return -1;
+    gp.buffer = (__u64)(uintptr_t)buf;
+    fprintf(stderr, "[kbase] query_props: dev->fd=%d\n", dev->fd);
+    int ioctl_ret = ioctl(dev->fd, _IOW(0x80, 3, struct { __u64 b; __u32 s; __u32 f; }), &gp);
+    fprintf(stderr, "[kbase] query_props: ioctl_ret=%d errno=%d\n", ioctl_ret, errno);
+    if (ioctl_ret >= 0) {
+        gp.size = ioctl_ret;
+        fprintf(stderr, "[kbase] query_props: gp.size=%u\n", gp.size);
+        __u8 *cur = buf;
+        while (cur < (__u8 *)buf + gp.size) {
+            __u8 *hdr = cur;
+            __u32 header = hdr[0] | (hdr[1] << 8) | (hdr[2] << 16) | (hdr[3] << 24);
+            __u32 size_code = header & 0x3;
+            __u32 type = header >> 2;
+            cur += 4;
+            __u32 size = (size_code == 0) ? 1 : (size_code == 1) ? 2 : (size_code == 2) ? 4 : 8;
+            __u32 value32 = (size >= 4) ? (cur[0] | (cur[1] << 8) | (cur[2] << 16) | (cur[3] << 24)) : 0;
+            fprintf(stderr, "[kbase] gpup prop type=%u size=%u value=%u\n", type, size, value32);
+            switch (type) {
+            case 18: p->max_threads_per_core = value32; break;
+            case 19: p->max_threads_per_wg = value32; break;
+            case 21: p->num_registers_per_core = value32; break;
+            case 22: p->max_tasks_per_core = value32; break;
+            case 29: p->l2_features = value32; break;
+            case 31: p->mem_features = value32; break;
+            case 32: p->mmu_features = value32; break;
+            case 51: p->tiler_features = value32; break;
+            case 52: p->texture_features[0] = value32; break;
+            case 53: p->texture_features[1] = value32; break;
+            case 54: p->texture_features[2] = value32; break;
+            case 56: if (!p->max_threads_per_core) p->max_threads_per_core = value32; break;
+            case 57: if (!p->max_threads_per_wg) p->max_threads_per_wg = value32; break;
+            case 80: p->texture_features[3] = value32; break;
+                                    }
+            cur += size;
+        }
+    }
+    free(buf);
+    fprintf(stderr, "[kbase] query_props: gpu_id=0x%llx shader=0x%llx threads=%u wg=%u\n",
+            (unsigned long long)p->gpu_id, (unsigned long long)p->shader_present,
+            p->max_threads_per_core, p->max_threads_per_wg);
     return 0;
 }
 
@@ -189,6 +226,8 @@ kbase_dev_create(int fd, uint32_t flags, const struct pan_kmod_driver *drv, cons
     kd->base.props.gpu_id = info.gpu_id ? info.gpu_id : 0xA8070000;
     kd->base.props.shader_present = info.shader_present ? info.shader_present : 0x3F;
     kd->base.props.pgsize_bitmap = 0x1;
+    /* Llenar todas las props reales desde GPUPROPS */
+    kbase_query_props(&kd->base, &kd->base.props);
     kd->base.props.allowed_group_priorities_mask = PAN_KMOD_GROUP_ALLOW_PRIORITY_MEDIUM;
     fprintf(stderr, "[kbase] device ready, fd=%d group=%u ctx=%u gpu_id=0x%llx shader=0x%llx\n", fd, kd->group, kd->ctx, (unsigned long long)kd->base.props.gpu_id, (unsigned long long)kd->base.props.shader_present);
     /* Force kbase ops - Mesa may overwrite them */

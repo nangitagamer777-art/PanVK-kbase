@@ -427,6 +427,7 @@ panvk_physical_device_init(struct panvk_physical_device *device,
    if (result != VK_SUCCESS)
       goto fail;
    device->formats.blendable = pan_blendable_format_table(arch);
+   device->formats.all = pan_format_table(arch);
 
    unsigned core_count =
       pan_query_core_count(&device->kmod.dev->props);
