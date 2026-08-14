@@ -31,14 +31,12 @@ Syncobjs integrated directly in Mesa — no LD_PRELOAD required.
 | `pan_model.c` | Mali-G615 model support and fallback |
 | `pan_model.h` | Hardware `gpu_id` handling |
 | `meson.build` | Build integration for the kbase backend |
-| `I want to clarify that all mesa src files are indispensable and necessary` |
+| `pan_kmod_syncobj.c` | Syncobjs integrated in Mesa (no DRM shim needed) |
+| `panvk_vX_cmd_meta.c` | Command buffer meta ops (CPU copy fast path) |
+| `panvk_buffer.h` | Buffer struct with `host_ptr` for CPU copy |
+| `panvk_buffer.c` | Buffer bind with `host_ptr` saved for CPU copy |
 
-The DRM compatibility layer is maintained separately in `Panvk_Kmod`:
-
-| File | Purpose |
-|------|---------|
-| `src/libkbase_drm.c` | DRM symbol compatibility layer |
-| `src/libkbase_scudo_fix.c` | Optional Scudo `mprotect()` workaround |
+All Mesa source files are indispensable and necessary.
 
 ## How to compile
 
@@ -122,50 +120,13 @@ Expected:
 | Panthor GPU device | `/dev/mali0` |
 | DRM syncobj interface | compatibility Layer |
 
-## DRM compatibility layer (OBSOLETE)
+## DRM compatibility layer (REMOVED)
 
-`libkbase_drm.so` is no longer required. All syncobj operations are now
-integrated directly in Mesa via `pan_kmod_syncobj.c`.
+The DRM compatibility layer has been completely removed from this repo.
+All syncobj operations are integrated directly in Mesa via
+`pan_kmod_syncobj.c`. No LD_PRELOAD is required.
 
-The old LD_PRELOAD layer is kept for reference only. The real GPU execution
-path is handled entirely by the kbase backend through `/dev/mali0`.
-
-The real GPU execution path is handled by the kbase backend through
-`/dev/mali0`.
-
-The DRM library exists because parts of PanVK/Mesa still expect DRM
-symbols or DRM-related interfaces during initialization and later
-execution paths.
-
-The current compatibility layer provides symbols including:
-
-- `drmGetDevices2`
-- `drmSyncobjCreate`
-- `drmSyncobjDestroy`
-- `drmSyncobjWait`
-- `drmSyncobjTimelineWait`
-- `drmSyncobjExportSyncFile`
-- `drmSyncobjImportSyncFile`
-- `drmSyncobjReset`
-- `drmSyncobjTransfer`
-- `drmGetCap`
-- `drmIoctl`
-- `drmCloseBufferHandle`
-- `drmPrimeFDToHandle`
-- `drmPrimeHandleToFD`
-
-The syncobj operations required by the current execution path are
-implemented using real kbase-backed synchronization.
-
-The remaining DRM interfaces that have no direct equivalent in kbase
-are kept as compatibility stubs. These include sync-file
-import/export, syncobj transfer, DRM capability queries, PRIME/DMA-BUF
-operations, and GEM buffer-handle operations.
-
-These stubs are intentional and are not part of the actual GPU
-execution path.
-
-## Testing without libkbase_drm.so (NOW WORKING)
+## Testing without libkbase_drm.so (NOW WORKING)## Testing without libkbase_drm.so (NOW WORKING)
 
 The driver runs without LD_PRELOAD. All syncobj symbols are defined
 directly in `libvulkan_panfrost.so` via `pan_kmod_syncobj.c`.
@@ -198,32 +159,24 @@ Expected:
 | `vkDestroyDevice` | OK | Completes without crash |
 | CSIF naming | CLEAN | Uses `csif` instead of the old `fake_csif` label |
 
-## DRM / Syncobj Compatibility Layer
+## Syncobj Status
+
+All syncobjs are now compiled directly into `libvulkan_panfrost.so` via
+`pan_kmod_syncobj.c`. No external shim is needed.
 
 | Function | Status | Implementation |
 |---|---|---|
-| `drmSyncobjCreate` | REAL | Real handle map |
-| `drmSyncobjWait` | REAL | Polls `output_page[CS_ACTIVE]` |
-| `drmSyncobjReset` | REAL | Resets output/input state |
-| `drmSyncobjDestroy` | REAL | Removes handle from the map |
-| `drmSyncobjTimelineWait` | REAL | Uses the real wait implementation |
-| `drmGetDevices2` | WRAPPER | Calls the real libdrm implementation |
-| `drmIoctl` | WRAPPER | Calls the real libdrm implementation |
-| `drmGetCap` | ! STUB | Works as a compatibility stub; no equivalent concept is needed/provided by kbase |
-| `drmPrime*` | ! STUB | Works as compatibility stubs; kbase has no DMA-BUF equivalent in this backend |
-| `drmCloseBufferHandle` | ! STUB | Works as a compatibility stub; kbase has no GEM handle equivalent |
+| `kbase_drm_syncobj_create` | INTEGRATED | Handle map in Mesa |
+| `kbase_drm_syncobj_wait` | INTEGRATED | Returns immediately (CPU sync) |
+| `kbase_drm_syncobj_reset` | INTEGRATED | Resets `output_page` |
+| `kbase_drm_syncobj_transfer` | INTEGRATED | Signals `output_page` |
+| `drmSyncobj* aliases` | INTEGRATED | For Mesa loader compatibility |
 
-> **Note:** The entries are intentionally kept as stubs. They are not current blockers or broken implementations; the corresponding DRM concepts (`DMA-BUF`, GEM handles, DRM capabilities, etc.) have no direct equivalent in the kbase backend and are not required by the current PanVK-kbase execution path.
+## Copy Buffer Status
 
-## Hito 9: GPU Copy Buffer
-
-| Component | Status | Details |
-|---|---|---|
-| `vkCmdCopyBuffer` (small) | WORKING | CPU memcpy fast path for < 64KB |
-| `vkCmdCopyBuffer` (large) | TODO | GPU compute shader for >= 64KB |
-| Syncobjs in Mesa | INTEGRATED | `pan_kmod_syncobj.c` compiled in |
-| LD_PRELOAD | REMOVED | No external shim needed |
-| Copy test (256B) | PASS | `REAL GPU COPY PASS` |
+Small copies (< 64KB) work via CPU memcpy fast path.
+Large copies (>= 64KB) still need GPU compute shader implementation.
+Copy test (256B) passes: `REAL GPU COPY PASS`.
 
 ## Credits
 
