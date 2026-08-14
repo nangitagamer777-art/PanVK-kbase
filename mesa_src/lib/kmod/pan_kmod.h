@@ -785,6 +785,16 @@ void pan_kmod_queue_bo_map_sync(struct pan_kmod_bo *bo, uint64_t bo_offset,
                                 enum pan_kmod_bo_sync_type type);
 
 void pan_kmod_flush_bo_map_syncs(struct pan_kmod_dev *dev);
+/* ── kbase syncobj ── */
+int kbase_drm_syncobj_create(int fd, uint32_t flags, uint32_t *handle);
+int kbase_drm_syncobj_destroy(int fd, uint32_t handle);
+int kbase_drm_syncobj_wait(int fd, uint32_t *handles, unsigned num, int64_t timeout, unsigned flags, uint32_t *first);
+int kbase_drm_syncobj_timeline_wait(int fd, uint32_t *handles, uint64_t *points, unsigned num, int64_t timeout, unsigned flags, uint32_t *first);
+int kbase_drm_syncobj_reset(int fd, const uint32_t *handles, uint32_t count);
+int kbase_drm_syncobj_transfer(int fd, uint32_t dst_handle, uint64_t dst_point, uint32_t src_handle, uint64_t src_point, uint32_t flags);
+int kbase_drm_syncobj_export_sync_file(int fd, uint32_t handle, int *sync_file_fd);
+int kbase_drm_syncobj_import_sync_file(int fd, uint32_t handle, int sync_file_fd);
+
 /* ── kbase CS queue ── */
 struct kbase_cs_queue;
 struct kbase_csif_info {

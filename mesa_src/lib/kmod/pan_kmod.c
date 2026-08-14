@@ -245,10 +245,14 @@ static struct pan_kmod_bo *kbase_bo_alloc(struct pan_kmod_dev *dev, struct pan_k
     struct pan_kmod_bo *bo = pan_kmod_dev_alloc(dev, sizeof(*bo));
     if (!bo) return NULL;
     pan_kmod_bo_init(bo, dev, vm, size, flags, (uint32_t)mem.out.gpu_va);
+    
+    /* Guardar GPU VA completo en priv para mmap offset */
+    bo->priv = (void *)(uintptr_t)mem.out.gpu_va;
+    
     return bo;
 }
 static void kbase_bo_free(struct pan_kmod_bo *bo) { pan_kmod_bo_cleanup(bo); pan_kmod_dev_free(bo->dev, bo); }
-static off_t kbase_bo_get_mmap_offset(struct pan_kmod_bo *bo) { return (off_t)bo->handle; }
+static off_t kbase_bo_get_mmap_offset(struct pan_kmod_bo *bo) { return (off_t)(uintptr_t)bo->priv; }
 static bool kbase_bo_wait(struct pan_kmod_bo *bo, int64_t t, bool r) { return true; }
 static void kbase_bo_set_label(struct pan_kmod_dev *d, struct pan_kmod_bo *b, const char *l) {}
 static struct pan_kmod_bo *kbase_bo_import(struct pan_kmod_dev *d, uint32_t h, uint64_t s) { return NULL; }
@@ -336,25 +340,71 @@ int kbase_cs_queue_create(struct pan_kmod_dev *dev) {
 }
 
 /* ── kbase CS queue submit ── */
-int kbase_cs_queue_submit(struct pan_kmod_dev *dev, uint64_t stream_gpu_addr, void *stream_cpu_addr, uint32_t stream_size) {
-    struct kbase_dev *kd = (struct kbase_dev *)dev;
-    struct kbase_cs_queue *q = &kd->cs_queue;
-    if (!q->created) { int cret = kbase_cs_queue_create(dev); if (cret < 0) return -1; }
-    int fd = kd->base.fd;
+int
+kbase_cs_queue_submit(struct pan_kmod_dev *dev,
+                      uint64_t stream_gpu_addr,
+                      void *stream_cpu_addr,
+                      uint32_t stream_size)
+{
+   struct kbase_dev *kd = (struct kbase_dev *)dev;
+   struct kbase_cs_queue *q = &kd->cs_queue;
 
-    uint32_t insert = *q->input_page;
-    uint32_t ring_mask = q->ring_size - 1;
-    uint8_t *ring = (uint8_t *)q->ring;
+   if (!q->created) {
+      int cret = kbase_cs_queue_create(dev);
+      if (cret < 0)
+         return -1;
+   }
 
-    memcpy(ring + insert, stream_cpu_addr, stream_size);
+   uint32_t insert = *q->input_page;
 
-    insert = (insert + stream_size) & ring_mask;
-    *q->input_page = insert;
+   fprintf(stderr,
+           "[KBASE_SUBMIT] stream_gpu=0x%llx stream_cpu=%p size=%u "
+           "ring_gpu=0x%llx ring_cpu=%p insert=%u\n",
+           (unsigned long long)stream_gpu_addr,
+           stream_cpu_addr,
+           stream_size,
+           (unsigned long long)q->ring_gpu_va,
+           q->ring,
+           insert);
 
-    struct kbase_ioctl_cs_queue_kick kick = { .buffer_gpu_addr = q->ring_gpu_va };
-    if (ioctl(fd, KBASE_IOCTL_CS_QUEUE_KICK, &kick) < 0) { fprintf(stderr, "[kbase] KICK failed: %m\n"); return -1; }
-    fprintf(stderr, "[kbase] submit: size=%u insert=%u\n", stream_size, insert);
-    return 0;
+   if (stream_size == 0 || stream_size > q->ring_size) {
+      fprintf(stderr, "[KBASE_SUBMIT] INVALID STREAM SIZE\n");
+      return -1;
+   }
+
+   if (insert + stream_size > q->ring_size) {
+      fprintf(stderr,
+              "[KBASE_SUBMIT] RING WRAP: insert=%u size=%u ring=%zu\n",
+              insert, stream_size, q->ring_size);
+      return -1;
+   }
+
+   memcpy((uint8_t *)q->ring + insert,
+          stream_cpu_addr,
+          stream_size);
+
+   insert += stream_size;
+
+   __sync_synchronize();
+   *q->input_page = insert;
+   __sync_synchronize();
+
+   fprintf(stderr,
+           "[KBASE_SUBMIT] input_page=%u -> KICK\n",
+           insert);
+
+   struct kbase_ioctl_cs_queue_kick kick = {
+      .buffer_gpu_addr = q->ring_gpu_va,
+   };
+
+   if (ioctl(kd->base.fd, KBASE_IOCTL_CS_QUEUE_KICK, &kick) < 0) {
+      fprintf(stderr, "[KBASE_SUBMIT] KICK failed: %m\n");
+      return -1;
+   }
+
+   fprintf(stderr, "[KBASE_SUBMIT] KICK OK\n");
+
+   return 0;
 }
 
 /* ── kbase CS queue destroy ── */

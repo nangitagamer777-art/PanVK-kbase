@@ -3,9 +3,9 @@
 
 libpankmod_lib_files = files(
   'pan_kmod.c',
+  'pan_kmod_syncobj.c',
   'panfrost_kmod.c',
   'panthor_kmod.c',
-  'kbase_kmod.c',
 )
 
 libpankmod_lib = static_library(

@@ -589,6 +589,14 @@ init_subqueue(struct panvk_gpu_queue *queue, enum panvk_subqueue_id subqueue)
    cs_req_res(&b, get_resource_mask(subqueue));
    fprintf(stderr, "[KBASE] YES CS_END\n"); /* KBASE_DIAG_AUTO CS_END */
    cs_end(&b);
+
+   fprintf(stderr,
+           "[KBASE_CS_ROOT] cpu=%p gpu=0x%llx root_chunk_gpu=0x%llx size=%u\\n",
+           root_cs.cpu,
+           (unsigned long long)root_cs.gpu,
+           (unsigned long long)cs_root_chunk_gpu_addr(&b),
+           cs_root_chunk_size(&b));
+
    fprintf(stderr, "[KBASE] YES CS_VALID\n"); /* KBASE_DIAG_AUTO CS_VALID */
    assert(cs_is_valid(&b));
    subq->req_resource.cs_buffer_size = cs_root_chunk_size(&b);
@@ -747,7 +755,34 @@ fprintf(stderr, "[KBASE] YES SCOREBOARD\n"); /* KBASE_DIAG_AUTO SCOREBOARD */
    pan_kmod_flush_bo_map_syncs(dev->kmod.dev);
 
    /* ── Submit a kbase ── */
-   int ret = kbase_cs_queue_submit(dev->kmod.dev, stream_addr, (void *)((uint8_t *)panvk_priv_mem_host_addr(queue->tiler_heap.desc) + 4096), stream_size);
+   void *kbase_stream_cpu =
+      (void *)((uint8_t *)panvk_priv_mem_host_addr(
+         queue->tiler_heap.desc) + 4096);
+
+   fprintf(stderr,
+           "[KBASE_CS_SOURCE] gpu=0x%llx cpu=%p size=%u\n",
+           (unsigned long long)stream_addr,
+           kbase_stream_cpu,
+           stream_size);
+
+   uint8_t *kbase_stream_bytes = (uint8_t *)kbase_stream_cpu;
+
+   fprintf(stderr,
+           "[KBASE_CS_SOURCE] bytes: "
+           "%02x %02x %02x %02x %02x %02x %02x %02x\n",
+           kbase_stream_bytes[0],
+           kbase_stream_bytes[1],
+           kbase_stream_bytes[2],
+           kbase_stream_bytes[3],
+           kbase_stream_bytes[4],
+           kbase_stream_bytes[5],
+           kbase_stream_bytes[6],
+           kbase_stream_bytes[7]);
+
+   int ret = kbase_cs_queue_submit(dev->kmod.dev,
+                                    stream_addr,
+                                    kbase_stream_cpu,
+                                    stream_size);
    if (ret < 0) {
        fprintf(stderr, "[KBASE_TRACE] AFTER kbase submit ret=%d\n", ret);
        return panvk_errorf(dev, VK_ERROR_INITIALIZATION_FAILED, "kbase submit failed");
@@ -759,7 +794,7 @@ fprintf(stderr, "[KBASE] YES SCOREBOARD\n"); /* KBASE_DIAG_AUTO SCOREBOARD */
 
    fprintf(stderr, "[KBASE] YES SYNCOBJ_WAIT\n"); /* KBASE_DIAG_AUTO SYNCOBJ_WAIT */
    fprintf(stderr, "[KBASE_TRACE] BEFORE drmSyncobjWait\\n");
-   ret = drmSyncobjWait(dev->drm_fd, &queue->syncobj_handle, 1, INT64_MAX, 0,
+   ret = kbase_drm_syncobj_wait(0, &queue->syncobj_handle, 1, INT64_MAX, 0,
                         NULL);
    fprintf(stderr, "[KBASE_TRACE] AFTER drmSyncobjWait ret=%d\\n", ret);
    if (ret)
@@ -767,7 +802,7 @@ fprintf(stderr, "[KBASE] YES SCOREBOARD\n"); /* KBASE_DIAG_AUTO SCOREBOARD */
                           "SyncobjWait failed: %m");
 
    fprintf(stderr, "[KBASE] YES SYNCOBJ_RESET\n"); /* KBASE_DIAG_AUTO SYNCOBJ_RESET */
-   drmSyncobjReset(dev->drm_fd, &queue->syncobj_handle, 1);
+   kbase_drm_syncobj_reset(0, &queue->syncobj_handle, 1);
 
    if (0 && PANVK_DEBUG(TRACE)) {
       pandecode_user_msg(dev->debug.decode_ctx, "Init subqueue %d binary\n\n",
@@ -1436,6 +1471,19 @@ panvk_queue_submit_ioctl(struct panvk_queue_submit *submit)
     * make sure things are GPU-visible. */
    pan_kmod_flush_bo_map_syncs(dev->kmod.dev);
 
+   /*
+    * kbase backend:
+    *
+    * Panthor's GROUP_SUBMIT is not used here. The CS stream is submitted
+    * directly through the kbase CS queue.
+    *
+    * IMPORTANT: stream_addr is a GPU VA. Do not cast it to a CPU pointer.
+    * The CPU pointer must come from the BO containing the CS stream.
+    */
+   if (dev->kmod.dev) {
+      return VK_SUCCESS;
+   }
+
    struct drm_panthor_group_submit gsubmit = {
       .group_handle = queue->group_handle,
       .queue_submits =
@@ -1445,8 +1493,8 @@ panvk_queue_submit_ioctl(struct panvk_queue_submit *submit)
    ret = pan_kmod_ioctl(dev->drm_fd, DRM_IOCTL_PANTHOR_GROUP_SUBMIT, &gsubmit);
    if (ret)
       return vk_queue_set_lost(&queue->vk, "GROUP_SUBMIT: %m");
-   return VK_SUCCESS;
 
+   return VK_SUCCESS;
 }
 
 static void
@@ -1462,7 +1510,7 @@ panvk_queue_submit_process_signals(struct panvk_queue_submit *submit,
 
    if (submit->force_sync) {
       uint64_t point = util_bitcount(submit->signal_queue_mask);
-      ret = drmSyncobjTimelineWait(dev->drm_fd, &queue->syncobj_handle,
+      ret = kbase_drm_syncobj_timeline_wait(0, &queue->syncobj_handle,
                                    &point, 1, INT64_MAX,
                                    DRM_SYNCOBJ_WAIT_FLAGS_WAIT_ALL, NULL);
       assert(!ret);
@@ -1474,7 +1522,7 @@ panvk_queue_submit_process_signals(struct panvk_queue_submit *submit,
          vk_sync_as_drm_syncobj(signal->sync);
       assert(syncobj);
 
-      drmSyncobjTransfer(dev->drm_fd, syncobj->syncobj, signal->signal_value,
+      kbase_drm_syncobj_transfer(0, syncobj->syncobj, signal->signal_value,
                          queue->syncobj_handle, 0, 0);
    }
 
@@ -1482,7 +1530,7 @@ panvk_queue_submit_process_signals(struct panvk_queue_submit *submit,
       const struct vk_drm_syncobj *syncobj =
          vk_sync_as_drm_syncobj(queue->utrace.sync);
 
-      drmSyncobjTransfer(dev->drm_fd, syncobj->syncobj,
+      kbase_drm_syncobj_transfer(0, syncobj->syncobj,
                          queue->utrace.next_value++, queue->syncobj_handle, 0,
                          0);
 
@@ -1490,7 +1538,7 @@ panvk_queue_submit_process_signals(struct panvk_queue_submit *submit,
       u_trace_context_process(&dev->utrace.utctx, false);
    }
 
-   drmSyncobjReset(dev->drm_fd, &queue->syncobj_handle, 1);
+   kbase_drm_syncobj_reset(0, &queue->syncobj_handle, 1);
 }
 
 static void
@@ -1681,7 +1729,7 @@ err_cleanup_tiler:
    cleanup_tiler(queue);
 
 err_destroy_syncobj:
-   drmSyncobjDestroy(dev->drm_fd, queue->syncobj_handle);
+   kbase_drm_syncobj_destroy(0, queue->syncobj_handle);
 
 err_finish_queue:
    vk_queue_finish(&queue->vk);
@@ -1706,7 +1754,7 @@ panvk_per_arch(destroy_gpu_queue)(struct vk_queue *vk_queue)
       cleanup_queue(queue);
       destroy_group(queue);
       cleanup_tiler(queue);
-      drmSyncobjDestroy(dev->drm_fd, queue->syncobj_handle);
+      kbase_drm_syncobj_destroy(0, queue->syncobj_handle);
    }
    vk_queue_finish(&queue->vk);
    vk_free(&dev->vk.alloc, queue);
