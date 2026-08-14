@@ -11,6 +11,8 @@ kernel driver instead of the open-source Panthor DRM driver.
 
 **Status:** `vkCreateDevice` returns `VK_SUCCESS` on Mali-G615 MC6.
 CSF queue lifecycle fully working: REGISTER -> BIND -> KICK with 3 subqueues.
+`vkCmdCopyBuffer` (small copies) working via CPU fast path.
+Syncobjs integrated directly in Mesa — no LD_PRELOAD required.
 
 ## Files
 
@@ -71,7 +73,7 @@ Copy the built Vulkan library and the required runtime components to
 Current working configuration:
 
     cd /data/local/tmp
-    LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so ./vk_final_test
+    LD_LIBRARY_PATH=/data/local/tmp ./vk_final_test
 
 Expected:
 
@@ -120,9 +122,13 @@ Expected:
 | Panthor GPU device | `/dev/mali0` |
 | DRM syncobj interface | compatibility Layer |
 
-## DRM compatibility layer
+## DRM compatibility layer (OBSOLETE)
 
-`libkbase_drm.so` does not perform the actual GPU execution.
+`libkbase_drm.so` is no longer required. All syncobj operations are now
+integrated directly in Mesa via `pan_kmod_syncobj.c`.
+
+The old LD_PRELOAD layer is kept for reference only. The real GPU execution
+path is handled entirely by the kbase backend through `/dev/mali0`.
 
 The real GPU execution path is handled by the kbase backend through
 `/dev/mali0`.
@@ -159,22 +165,19 @@ operations, and GEM buffer-handle operations.
 These stubs are intentional and are not part of the actual GPU
 execution path.
 
-## Testing without libkbase_drm.so
+## Testing without libkbase_drm.so (NOW WORKING)
 
-Running without the DRM compatibility layer currently reaches kbase
-device initialization successfully:
+The driver runs without LD_PRELOAD. All syncobj symbols are defined
+directly in `libvulkan_panfrost.so` via `pan_kmod_syncobj.c`.
 
-    [kbase] trying fallback to /dev/mali0...
-    [kbase] drmGetVersion failed on /dev/mali0, trying kbase backend anyway
-    [kbase] device ready, fd=4 ...
-    [kbase] after get_drm_device_ids: result=0
+    cd /data/local/tmp
+    LD_LIBRARY_PATH=/data/local/tmp ./vk_final_test
 
-but then crashes with:
+Expected:
 
-    Segmentation fault
-
-Therefore `libkbase_drm.so` is currently required by the working runtime
-configuration even
+    === TEST COMPLETED ===
+    vkCreateDevice returned: 0
+    STATUS: SUCCESS (Device Created)
 
 ## Kbase Backend Status
 
@@ -211,6 +214,16 @@ configuration even
 | `drmCloseBufferHandle` | ! STUB | Works as a compatibility stub; kbase has no GEM handle equivalent |
 
 > **Note:** The entries are intentionally kept as stubs. They are not current blockers or broken implementations; the corresponding DRM concepts (`DMA-BUF`, GEM handles, DRM capabilities, etc.) have no direct equivalent in the kbase backend and are not required by the current PanVK-kbase execution path.
+
+## Hito 9: GPU Copy Buffer
+
+| Component | Status | Details |
+|---|---|---|
+| `vkCmdCopyBuffer` (small) | WORKING | CPU memcpy fast path for < 64KB |
+| `vkCmdCopyBuffer` (large) | TODO | GPU compute shader for >= 64KB |
+| Syncobjs in Mesa | INTEGRATED | `pan_kmod_syncobj.c` compiled in |
+| LD_PRELOAD | REMOVED | No external shim needed |
+| Copy test (256B) | PASS | `REAL GPU COPY PASS` |
 
 ## Credits
 
