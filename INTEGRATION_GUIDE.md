@@ -2,7 +2,7 @@
 
 Step-by-step guide to patch Mesa 26.2.0-rc2 with the kbase backend.
 
-## Status: vkCreateDevice SUCCESS
+## Status: vkCreateDevice SUCCESS + Copy Buffer Working
 
 `vkCreateDevice` returns `VK_SUCCESS` on the tested Mali-G615 MC6.
 
@@ -11,6 +11,9 @@ The CSF queue lifecycle is working:
     REGISTER (36) -> BIND (39) -> KICK (37)
 
 The tested configuration uses three subqueues.
+
+Copy buffer (< 64KB) works via CPU memcpy fast path.
+Syncobjs integrated directly in Mesa — no LD_PRELOAD required.
 
 ## Prerequisites
 
@@ -268,65 +271,27 @@ GPU execution.
 
 The DRM compatibility layer does not replace the kbase backend.
 
-## DRM compatibility layer
+## DRM compatibility layer (REMOVED)
 
-The standalone DRM compatibility source is:
+The DRM compatibility layer has been completely removed. All syncobj
+operations are integrated directly in Mesa via `pan_kmod_syncobj.c`.
+No LD_PRELOAD is required.
 
-    ~/Panvk_Kmod/src/libkbase_drm.c
+## Testing without libkbase_drm.so (NOW WORKING)## Testing without libkbase_drm.so
 
-It is compiled into:
-
-    libkbase_drm.so
-
-The purpose of this library is to provide DRM symbols that PanVK/Mesa
-still expects to resolve.
-
-The current source contains compatibility implementations for functions
-including:
-
-- `drmGetDevices2`
-- `drmSyncobjCreate`
-- `drmSyncobjDestroy`
-- `drmSyncobjWait`
-- `drmSyncobjTimelineWait`
-- `drmSyncobjExportSyncFile`
-- `drmSyncobjImportSyncFile`
-- `drmSyncobjReset`
-- `drmSyncobjTransfer`
-- `drmGetCap`
-- `drmIoctl`
-- `drmCloseBufferHandle`
-- `drmPrimeFDToHandle`
-- `drmPrimeHandleToFD`
-
-The actual GPU work remains in the kbase backend.
-
-## Testing without libkbase_drm.so
-
-The DRM compatibility layer was tested independently.
-
-Running:
+The driver runs without LD_PRELOAD:
 
     cd /data/local/tmp
     LD_LIBRARY_PATH=/data/local/tmp ./vk_final_test
 
-reaches kbase initialization:
+Expected:
 
-    [kbase] trying fallback to /dev/mali0...
-    [kbase] drmGetVersion failed on /dev/mali0, trying kbase backend anyway
-    [kbase] device ready, fd=4 ...
-    [kbase] after get_drm_device_ids: result=0
+    === TEST COMPLETED ===
+    vkCreateDevice returned: 0
+    STATUS: SUCCESS (Device Created)
 
-but then produces:
-
-    Segmentation fault
-
-Therefore the current working runtime still requires
-`libkbase_drm.so`.
-
-This does not mean DRM is being used for actual GPU submission.
-It means some later PanVK/Mesa code still depends on the DRM-facing
-interface or symbols.
+All syncobj symbols are defined directly in `libvulkan_panfrost.so`
+via `pan_kmod_syncobj.c`.
 
 ## Scudo compatibility layer
 
@@ -370,7 +335,7 @@ Result:
 Current working configuration:
 
     cd /data/local/tmp
-    LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so ./vk_final_test
+    LD_LIBRARY_PATH=/data/local/tmp ./vk_final_test
 
 Expected:
 
@@ -426,7 +391,7 @@ Runtime:
     cp /sdcard/libvulkan_panfrost_kbase.so /data/local/tmp/libvulkan_panfrost.so
     cp /sdcard/libkbase_drm.so /data/local/tmp/libkbase_drm.so
     cd /data/local/tmp
-    LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so ./vk_final_test
+    LD_LIBRARY_PATH=/data/local/tmp ./vk_final_test
     LD_LIBRARY_PATH=/data/local/tmp LD_PRELOAD=libkbase_drm.so ./vk_destroy_test
 
 ## Environment Paths
@@ -465,7 +430,9 @@ Show exported symbols:
 - sparse_dummy: 2MB BO with PAN_KMOD_BO_FLAG_NO_MMAP
 - syncobjs: poll output_page CS_ACTIVE until idle
 - libkbase_scudo_fix.so: NOT required
-- libkbase_drm.so: REQUIRED
+- libkbase_drm.so: REMOVED (syncobjs integrated in Mesa)
+- CPU copy buffer: WORKING (< 64KB)
+- GPU copy buffer: TODO (>= 64KB)
 
 ## Environment Paths
 
@@ -502,4 +469,6 @@ Show exported symbols:
 - sparse_dummy: 2MB BO with PAN_KMOD_BO_FLAG_NO_MMAP
 - syncobjs: poll output_page CS_ACTIVE until idle
 - libkbase_scudo_fix.so: NOT required
-- libkbase_drm.so: REQUIRED
+- libkbase_drm.so: REMOVED (syncobjs integrated in Mesa)
+- CPU copy buffer: WORKING (< 64KB)
+- GPU copy buffer: TODO (>= 64KB)
