@@ -1,0 +1,32 @@
+[options]
+buildtype = release
+platforms = android
+vulkan-drivers = panfrost
+gallium-drivers = panfrost
+egl = enabled
+allow-fallback-for = libdrm
+libdrm:intel = disabled
+libdrm:radeon = disabled
+libdrm:amdgpu = disabled
+libdrm:nouveau = disabled
+libdrm:vmwgfx = disabled
+libdrm:etnaviv = disabled
+libdrm:freedreno = disabled
+libdrm:vc4 = disabled
+vulkan-icd-dir = share/vulkan/icd.d
+c_args = -DPANVK_USE_WSI_PLATFORM
+cpp_args = 
+c_link_args = -llog
+cpp_link_args = -llog
+android-stub = true
+mesa-clc = system
+precomp-compiler = system
+llvm = disabled
+zstd = disabled
+glvnd = disabled
+werror = false
+egl-native-platform = android
+
+[properties]
+cross_file = ['/root/mesa-26.2.0-rc2/android-aarch64-35']
+

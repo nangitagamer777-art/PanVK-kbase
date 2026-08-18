@@ -23,6 +23,14 @@
 #include "panvk_macros.h"
 #include "panvk_physical_device.h"
 
+/* Declaracion del simbolo exportado por panvk_vX_cmd_meta.c */
+extern void panvk_v10_CmdCopyBuffer2(VkCommandBuffer commandBuffer,
+                                     const VkCopyBufferInfo2 *pCopyBufferInfo);
+
+/* Declaracion externa para el hook de copy commands */
+void panvk_v10_CmdCopyBuffer2(VkCommandBuffer commandBuffer,
+                              const VkCopyBufferInfo2 *pCopyBufferInfo);
+
 #ifdef HAVE_VALGRIND
 #include <memcheck.h>
 #include <valgrind.h>
@@ -100,7 +108,13 @@ static const struct vk_instance_extension_table panvk_instance_extensions = {
    .KHR_get_surface_capabilities2 = true,
    .KHR_surface = true,
    .KHR_surface_maintenance1 = true,
+   .KHR_xcb_surface = true,
+   .KHR_xlib_surface = true,
+   .KHR_wayland_surface = true,
+   .KHR_surface_protected_capabilities = true,
    .EXT_surface_maintenance1 = true,
+   .KHR_portability_enumeration = true,
+   .LUNARG_direct_driver_loading = true,
 #endif
 #ifdef VK_USE_PLATFORM_DISPLAY_KHR
    .KHR_display = true,
@@ -120,6 +134,12 @@ static const struct vk_instance_extension_table panvk_instance_extensions = {
 #ifdef VK_USE_PLATFORM_XLIB_XRANDR_EXT
    .EXT_acquire_xlib_display = true,
 #endif
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+   .KHR_android_surface = true,
+   .KHR_device_group_creation = true,
+#endif
+   .GOOGLE_surfaceless_query = true,
+   .EXT_swapchain_colorspace = true,
    .EXT_debug_report = true,
    .EXT_debug_utils = true,
 #ifndef VK_USE_PLATFORM_WIN32_KHR
@@ -319,6 +339,10 @@ panvk_EnumerateInstanceExtensionProperties(const char *pLayerName,
 PFN_vkVoidFunction
 panvk_GetInstanceProcAddr(VkInstance _instance, const char *pName)
 {
+   /* Hook para copy commands (bypass de la tabla de entrypoints) */
+   if (strcmp(pName, "vkCmdCopyBuffer2") == 0 || strcmp(pName, "vkCmdCopyBuffer2KHR") == 0) {
+      return (PFN_vkVoidFunction)panvk_v10_CmdCopyBuffer2;
+   }
    VK_FROM_HANDLE(panvk_instance, instance, _instance);
    return vk_instance_get_proc_addr(&instance->vk, &panvk_instance_entrypoints,
                                     pName);
