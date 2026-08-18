@@ -640,7 +640,7 @@ cs_alloc_ins_block(struct cs_builder *b, uint32_t num_instrs)
    assert(b->cur_chunk.size + num_instrs - 1 < b->cur_chunk.buffer.capacity);
    uint32_t pos = b->cur_chunk.pos;
    b->cur_chunk.pos += num_instrs;
-   return b->cur_chunk.buffer.cpu + pos;
+   return (uint8_t *)b->cur_chunk.buffer.cpu + pos * sizeof(uint64_t);
 }
 
 static inline void
