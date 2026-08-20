@@ -15,7 +15,7 @@ CSF queue lifecycle fully working: REGISTER -> BIND -> KICK with 3 subqueues.
 Syncobjs integrated directly in Mesa — no LD_PRELOAD required.
 
 
-##Rendering
+## Rendering
 
 For now, it only uses computer rendering and has no screen representation.
 
