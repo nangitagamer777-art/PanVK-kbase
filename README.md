@@ -17,7 +17,7 @@ Syncobjs integrated directly in Mesa — no LD_PRELOAD required.
 
 ## Rendering
 
-For now, it only uses computer rendering and has no screen representation.
+For now, it only uses compute rendering and has no screen representation.
 
 ## Files
 
