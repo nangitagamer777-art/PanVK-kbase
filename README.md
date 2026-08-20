@@ -14,6 +14,11 @@ CSF queue lifecycle fully working: REGISTER -> BIND -> KICK with 3 subqueues.
 `vkCmdCopyBuffer` (small copies) working via CPU fast path.
 Syncobjs integrated directly in Mesa — no LD_PRELOAD required.
 
+
+##Rendering
+
+For now, it only uses computer rendering and has no screen representation.
+
 ## Files
 
 | File | Purpose |
@@ -179,6 +184,10 @@ Large copies (>= 64KB) still need GPU compute shader implementation.
 Copy test (256B) passes: `REAL GPU COPY PASS`.
 
 ## Credits
+
+**Mesa3D**
+
+(https://mesa3d.org/)
 
 **Noin Haxel**
 
